@@ -29,8 +29,8 @@
   },
 
   // One tick every 2 minutes. The handler decides per source whether it is
-  // actually due, so this stays cheap and TomTom is only called inside the
-  // configured morning window.
+  // actually due, so this stays cheap and commute routing is only called
+  // inside the configured morning window.
   "triggers": {
     "crons": ["*/2 * * * *"]
   },
@@ -48,6 +48,13 @@
     "enabled": true
   },
 
+  // Without this, wrangler treats this file as the source of truth and
+  // overwrites or deletes dashboard-set vars on every deploy -- so the real
+  // coordinates set in the dashboard would be reset to the placeholders below
+  // by the next push. Keeping real locations out of the repo only works if
+  // deploys stop clobbering them.
+  "keep_vars": true,
+
   "vars": {
     "TIMEZONE": "Europe/London",
     "WEATHER_LAT": "51.5000",
@@ -61,7 +68,6 @@
     "COMMUTE_WINDOW_START": "06:00",
     "COMMUTE_WINDOW_END": "09:30",
     "COMMUTE_DAYS": "1,2,3,4,5",
-    "COMMUTE_TYPICAL_MINUTES": "32",
     "TFL_ROAD_IDS": "a12,a13,a406",
     "TFL_LINE_MODES": "tube,dlr,elizabeth-line,overground",
     "CRYPTO_IDS": "bitcoin,ethereum,solana",

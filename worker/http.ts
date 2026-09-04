@@ -13,10 +13,12 @@ export class UpstreamError extends Error {}
  */
 export async function fetchJson<T>(
   url: string,
-  { label, timeoutMs = DEFAULT_TIMEOUT_MS, headers }: {
+  { label, timeoutMs = DEFAULT_TIMEOUT_MS, headers, method, body }: {
     label: string;
     timeoutMs?: number;
     headers?: Record<string, string>;
+    method?: string;
+    body?: BodyInit;
   },
 ): Promise<T> {
   const controller = new AbortController();
@@ -25,6 +27,8 @@ export async function fetchJson<T>(
   try {
     const response = await fetch(url, {
       signal: controller.signal,
+      ...(method === undefined ? {} : { method }),
+      ...(body === undefined ? {} : { body }),
       ...(headers === undefined ? {} : { headers }),
     });
 

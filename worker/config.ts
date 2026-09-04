@@ -21,7 +21,6 @@ export interface Config {
     windowEndMinutes: number;
     /** ISO-ish weekday numbers, 0 = Sunday. */
     days: number[];
-    typicalMinutes: number;
   };
   tfl: { roadIds: string[]; lineModes: string[] };
   crypto: { ids: string[]; vsCurrency: string };
@@ -94,7 +93,6 @@ export function readConfig(env: Env): Config {
       windowStartMinutes: parseHhMm(env.COMMUTE_WINDOW_START || "") ?? 6 * 60,
       windowEndMinutes: parseHhMm(env.COMMUTE_WINDOW_END || "") ?? 9 * 60 + 30,
       days: list(env.COMMUTE_DAYS).map(Number).filter(Number.isInteger),
-      typicalMinutes: num(env.COMMUTE_TYPICAL_MINUTES, 30),
     },
     tfl: {
       roadIds: list(env.TFL_ROAD_IDS),

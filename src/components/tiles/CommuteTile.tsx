@@ -13,8 +13,8 @@ const STATE: Record<
 
 /**
  * Sized against the tile rather than the mode. The commute cell is three
- * columns in ambient and nine in the morning, and it falls back to the typical
- * baseline whenever no routing key is set -- so the number has to fill either
+ * columns in ambient and nine in the morning, and it falls back to a typical
+ * value whenever no live route is available -- so the number has to fill either
  * shape without being told which it is in.
  */
 const NUMBER_SIZE = "min(140px, 16cqw)";
@@ -72,7 +72,7 @@ export function CommuteTile({ source, now }: Props) {
             </div>
           </div>
         ) : (
-          // Outside the morning window: the configured baseline, no API call,
+          // Outside the morning window: a typical value, no API call,
           // and labelled so it is never mistaken for a live reading.
           <div className="flex min-h-0 flex-1 flex-col justify-center gap-2">
             <p className="flex items-baseline gap-3">

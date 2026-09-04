@@ -68,7 +68,7 @@ export interface Weather {
 
 export type TrafficState = "good" | "slow" | "bad";
 
-/** Inside the morning window: a real TomTom call with live traffic. */
+/** Inside the morning window: a real routing call with live traffic. */
 export interface CommuteLive {
   kind: "live";
   destination: string;
@@ -78,7 +78,7 @@ export interface CommuteLive {
   state: TrafficState;
 }
 
-/** Outside the window: the configured baseline, and no API call at all. */
+/** Outside the window: a typical fallback, and no API call at all. */
 export interface CommuteTypical {
   kind: "typical";
   destination: string;

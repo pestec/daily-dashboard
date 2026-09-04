@@ -3,6 +3,7 @@ import { assembleBoard } from "./board.ts";
 import { readConfig } from "./config.ts";
 import type { Env } from "./env.ts";
 import { refreshDue } from "./refresh.ts";
+import { fetchCommuteDebug } from "./sources/commute.ts";
 
 const JSON_HEADERS = {
   // The board is a live view; nothing between here and the TV should hold on
@@ -13,6 +14,28 @@ const JSON_HEADERS = {
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
+
+    if (url.pathname === "/api/debug/commute-live") {
+      const apiKey = env.GOOGLE_ROUTES_API_KEY;
+      if (apiKey === undefined || apiKey === "") {
+        return Response.json(
+          { error: "GOOGLE_ROUTES_API_KEY is not configured" },
+          { status: 400, headers: JSON_HEADERS },
+        );
+      }
+
+      const config = readConfig(env);
+      try {
+        const payload = await fetchCommuteDebug(config, apiKey);
+        return Response.json(payload, { headers: JSON_HEADERS });
+      } catch (error) {
+        console.error("commute debug failed", error);
+        return Response.json(
+          { error: error instanceof Error ? error.message : "Commute debug unavailable" },
+          { status: 502, headers: JSON_HEADERS },
+        );
+      }
+    }
 
     if (url.pathname !== "/api/board") {
       return new Response("Not found", { status: 404 });

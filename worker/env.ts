@@ -18,11 +18,11 @@ type Vars = {
  * clean checkout typechecks without one.
  *
  * Both are optional and the board degrades rather than breaking: with no
- * TomTom key the commute tile shows the configured baseline, and CoinGecko's
+ * Google Routes key the commute tile stays on the typical fallback, and CoinGecko's
  * free tier serves us without a key at a tighter rate limit.
  */
 interface Secrets {
-  TOMTOM_API_KEY?: string;
+  GOOGLE_ROUTES_API_KEY?: string;
   COINGECKO_API_KEY?: string;
 }
 

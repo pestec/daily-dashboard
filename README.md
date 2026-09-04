@@ -109,12 +109,21 @@ are placeholders. Set the real ones in the Cloudflare dashboard under
 `WEATHER_LAT`, `WEATHER_LON`, `HOME_LAT`, `HOME_LON`, `WORK_LAT`, `WORK_LON`,
 and your own `BIN_SCHEDULE`.
 
+> This is only safe because `wrangler.jsonc` sets `keep_vars: true`. By default
+> wrangler treats its config as the source of truth and overwrites or deletes
+> dashboard-set vars on every deploy — which would silently reset your real
+> location to the placeholder on the next push. Do not remove that flag.
+
+Note that a variable change only reaches the board once that source next
+refreshes, since tiles render from the cached payload — up to 15 minutes for
+weather.
+
 Every variable is documented in [`.env.example`](.env.example).
 
 ### 4. Secrets (both optional)
 
 ```bash
-npx wrangler secret put TOMTOM_API_KEY
+npx wrangler secret put GOOGLE_ROUTES_API_KEY
 npx wrangler secret put COINGECKO_API_KEY
 ```
 
@@ -122,8 +131,8 @@ Locally, copy `.dev.vars.example` to `.dev.vars` instead — it is gitignored.
 
 **The board works with no secrets at all.** Weather (Open-Meteo), disruption
 (TfL) and crypto (CoinGecko) are all keyless, and bins come from your config.
-Without `TOMTOM_API_KEY` the commute tile shows `COMMUTE_TYPICAL_MINUTES`,
-clearly labelled as typical, and never calls the routing API.
+Without `GOOGLE_ROUTES_API_KEY` the commute tile shows a labelled typical
+fallback and never calls the routing API.
 
 ## How it behaves
 
@@ -155,10 +164,16 @@ at a quiet hour the page reloads itself.
 | Tile | Source | Key | Refresh | Notes |
 | --- | --- | --- | --- | --- |
 | Weather | Open-Meteo | none | 15 min | Current, next 12 hours, next 3 days |
-| Commute | TomTom Routing | optional | 2 min | Morning window only — ~105 calls a weekday, well inside the 2,500/day free tier |
+| Commute | Google Routes API | optional | 2 min | Morning window only |
 | Disruption | TfL Unified API | none | 5 min | Line status plus road corridors |
 | Bins | Config schedule | none | 6 h | Pluggable provider, see below |
 | Crypto | CoinGecko | optional | 5 min | |
+
+### Commute debug endpoint
+
+`/api/debug/commute-live` performs one live Google Routes call and returns both
+the raw upstream JSON and the parsed commute payload. It is intended for
+shape-verification while setting up route fields and should not be polled.
 
 ### Bins
 

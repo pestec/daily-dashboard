@@ -20,8 +20,7 @@ interface Cadence {
 export const CADENCE: Record<SourceKey, Cadence> = {
   // Forecasts do not move quickly, and Open-Meteo is free but not ours to abuse.
   weather: { refreshSeconds: 900, ttlSeconds: 2_400 },
-  // Only ever called inside the morning window; ~105 calls on a weekday, well
-  // inside TomTom's 2,500/day free tier.
+  // Only ever called inside the morning window.
   commute: { refreshSeconds: 120, ttlSeconds: 600 },
   tfl: { refreshSeconds: 300, ttlSeconds: 1_200 },
   bins: { refreshSeconds: 21_600, ttlSeconds: 172_800 },
@@ -41,9 +40,9 @@ export async function fetchSource(
       return await fetchWeather(config);
 
     case "commute": {
-      const apiKey = env.TOMTOM_API_KEY;
-      // Outside the window, and whenever no key is configured, the configured
-      // baseline is the answer -- and it costs nothing. The tile labels it as
+      const apiKey = env.GOOGLE_ROUTES_API_KEY;
+      // Outside the window, and whenever no key is configured, the typical
+      // fallback is the answer -- and it costs nothing. The tile labels it as
       // typical, so this is never passed off as a live reading.
       if (apiKey === undefined || apiKey === "" || !isInCommuteWindow(config, now)) {
         return typicalCommute(config);

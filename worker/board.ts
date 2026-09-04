@@ -12,8 +12,14 @@ import {
 } from "../shared/types.ts";
 import type { Config } from "./config.ts";
 import type { Env } from "./env.ts";
-import { readEnvelope, toSource, writeEnvelope, type Envelope } from "./kv.ts";
-import { CADENCE, fetchSource } from "./refresh.ts";
+import {
+  envelopeAgeSeconds,
+  readEnvelope,
+  toSource,
+  writeEnvelope,
+  type Envelope,
+} from "./kv.ts";
+import { CADENCE, fetchSource, refreshDue } from "./refresh.ts";
 import { isInCommuteWindow } from "./sources/commute.ts";
 
 /**
@@ -41,13 +47,39 @@ async function loadSource(
     ctx.waitUntil(writeEnvelope(env.BOARD_KV, key, envelope));
     return envelope;
   } catch (error) {
-    return {
+    const failed: Envelope<unknown> = {
       data: null,
       fetchedAt: null,
       lastError: error instanceof Error ? error.message : "Unknown error",
       lastErrorAt: now.toISOString(),
     };
+    // Persisting the failure is what stops this being retried on *every*
+    // request: without a key in KV the source looks like a cold start
+    // forever, and a poll every 60s turns into a fetch every 60s against an
+    // upstream that is already failing.
+    ctx.waitUntil(writeEnvelope(env.BOARD_KV, key, failed));
+    return failed;
   }
+}
+
+/** Sources whose data is older than their own refresh cadence -- meaning the
+ *  scheduled refresh did not happen when it should have. */
+function overdue(
+  envelopes: ReadonlyMap<SourceKey, Envelope<unknown> | null>,
+  now: Date,
+): SourceKey[] {
+  return SOURCE_KEYS.filter((key) => {
+    const envelope = envelopes.get(key) ?? null;
+    if (envelope === null) return false;
+    const age = envelopeAgeSeconds(envelope, now);
+    // No data at all: go by how long ago it last failed.
+    if (age === null) {
+      if (envelope.lastErrorAt === undefined) return true;
+      const since = (now.getTime() - new Date(envelope.lastErrorAt).getTime()) / 1000;
+      return since >= CADENCE[key].refreshSeconds;
+    }
+    return age >= CADENCE[key].refreshSeconds;
+  });
 }
 
 export function boardMode(config: Config, now: Date): BoardMode {
@@ -66,6 +98,17 @@ export async function assembleBoard(
   );
 
   const envelopes = new Map(settled);
+
+  // Safety net. The cron owns refreshing, but a Worker can end up deployed
+  // without its triggers applied -- `wrangler versions upload` does not set
+  // them -- and a board that quietly serves hour-old weather forever is worse
+  // than one that repairs itself. Anything past its cadence is refreshed in
+  // the background, so the response stays a cache read and the next poll gets
+  // fresh data.
+  const stale = overdue(envelopes, now);
+  if (stale.length > 0) {
+    ctx.waitUntil(refreshDue(config, env, now, stale));
+  }
   const sourceFor = <T>(key: SourceKey): Source<T> =>
     toSource(envelopes.get(key) as Envelope<T> | null | undefined ?? null, CADENCE[key].ttlSeconds);
 
