@@ -80,24 +80,23 @@ not a credential — it is safe to commit, and Cloudflare's own templates do.
 
 ### 2. Deploy
 
-Either connect the repo for automatic deploys — Cloudflare dashboard →
-**Workers** → **Create** → **Import a repository** → this repo, with:
+Connect the repo for automatic deploys — Cloudflare dashboard → **Workers** →
+**Create** → **Import a repository**. The defaults work:
 
 - Build command: `npm run build`
-- Deploy command: `npx wrangler deploy -c dist/daily_dashboard/wrangler.json`
+- Deploy command: `npx wrangler deploy`
 
-…or deploy by hand:
+Or deploy by hand with `npm run deploy`.
 
-```bash
-npm run deploy
-```
+Once connected, every push to a branch gets its own preview URL of the form
+`<branch>-daily-dashboard.<subdomain>.workers.dev`.
 
-> The deploy command points at `dist/daily_dashboard/wrangler.json`, not the
-> `wrangler.jsonc` in the repo root. The Vite plugin generates that file during
-> the build and fills in `assets.directory` with the client output path, which
-> the source config deliberately leaves out.
-
-Once the repo is connected, every push to a branch gets its own preview URL.
+> **Two configs, both valid.** `npm run deploy` points wrangler at
+> `dist/daily_dashboard/wrangler.json`, which the Vite plugin generates during
+> the build. Plain `npx wrangler deploy` reads the root `wrangler.jsonc`
+> instead. Both are kept working: the root config sets `assets.directory` to
+> `./dist/client` explicitly so the default command does not fail, and the
+> generated config overrides it with its own relative path.
 
 ### 3. Set your real configuration
 

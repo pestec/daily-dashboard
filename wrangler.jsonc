@@ -6,7 +6,12 @@
 
   "assets": {
     "binding": "ASSETS",
-    // The Vite plugin fills in `directory` at build time from the client output.
+    // The Vite plugin overrides this in the config it generates at
+    // dist/daily_dashboard/wrangler.json. It is set here anyway so that a
+    // plain `npx wrangler deploy` against this file also works -- that is the
+    // default deploy command in Cloudflare's git integration, and without a
+    // directory it fails outright.
+    "directory": "./dist/client",
     "not_found_handling": "single-page-application",
     // Guarantees /api/* reaches the Worker instead of being swallowed by the
     // SPA fallback. Everything else is served straight from assets and never
