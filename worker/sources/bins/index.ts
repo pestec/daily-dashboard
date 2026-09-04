@@ -2,9 +2,8 @@ import type { Bins } from "../../../shared/types.ts";
 import type { Config } from "../../config.ts";
 import { fetchHaveringDebug, haveringProvider } from "./havering.ts";
 import { manualProvider } from "./manual.ts";
-import { ProviderUnavailableError, type BinProvider } from "./types.ts";
+import { type BinProvider } from "./types.ts";
 
-export { ProviderUnavailableError } from "./types.ts";
 export type { BinProvider } from "./types.ts";
 
 const PROVIDERS: readonly BinProvider[] = [manualProvider, haveringProvider];
@@ -22,10 +21,7 @@ export async function fetchBins(config: Config, today: string): Promise<Bins> {
   if (selected !== manualProvider) {
     try {
       return await selected.fetch(config, today);
-    } catch (error) {
-      if (!(error instanceof ProviderUnavailableError)) {
-        throw error;
-      }
+    } catch {
       // Fall through to the schedule that does not depend on a council site.
     }
   }
