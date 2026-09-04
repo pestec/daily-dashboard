@@ -21,7 +21,7 @@ export const CADENCE: Record<SourceKey, Cadence> = {
   // Forecasts do not move quickly, and Open-Meteo is free but not ours to abuse.
   weather: { refreshSeconds: 900, ttlSeconds: 2_400 },
   // Only ever called inside active commute windows.
-  commute: { refreshSeconds: 120, ttlSeconds: 600 },
+  commute: { refreshSeconds: 300, ttlSeconds: 600 },
   tfl: { refreshSeconds: 300, ttlSeconds: 1_200 },
   bins: { refreshSeconds: 21_600, ttlSeconds: 172_800 },
   crypto: { refreshSeconds: 300, ttlSeconds: 1_200 },

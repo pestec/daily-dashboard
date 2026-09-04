@@ -30,6 +30,16 @@ export interface Config {
   bins: { provider: string; rules: BinRule[] };
 }
 
+const COMMUTE_HOME = {
+  lat: 51.53578437178105,
+  lon: 0.19729711541201045,
+} as const;
+
+const COMMUTE_WORK = {
+  lat: 51.505184346371664,
+  lon: 0.05209853605892316,
+} as const;
+
 function num(raw: string | undefined, fallback: number): number {
   const parsed = Number(raw);
   return raw !== undefined && raw !== "" && Number.isFinite(parsed) ? parsed : fallback;
@@ -90,9 +100,9 @@ export function readConfig(env: Env): Config {
       label: env.WEATHER_LABEL || "Home",
     },
     commute: {
-      home: { lat: num(env.HOME_LAT, 51.5), lon: num(env.HOME_LON, -0.1) },
+      home: { lat: COMMUTE_HOME.lat, lon: COMMUTE_HOME.lon },
       homeLabel: env.COMMUTE_HOME_LABEL || "Home",
-      work: { lat: num(env.WORK_LAT, 51.51), lon: num(env.WORK_LON, -0.12) },
+      work: { lat: COMMUTE_WORK.lat, lon: COMMUTE_WORK.lon },
       workLabel: env.COMMUTE_LABEL || "Work",
       morningStartMinutes:
         parseHhMm(env.COMMUTE_MORNING_WINDOW_START || "") ??

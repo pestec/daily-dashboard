@@ -3,7 +3,9 @@ import { assembleBoard } from "./board.ts";
 import { readConfig } from "./config.ts";
 import type { Env } from "./env.ts";
 import { refreshDue } from "./refresh.ts";
+import { fetchBinsDebug } from "./sources/bins/index.ts";
 import { activeCommuteSlot, fetchCommuteDebug } from "./sources/commute.ts";
+import { zonedNow } from "./time.ts";
 
 const JSON_HEADERS = {
   // The board is a live view; nothing between here and the TV should hold on
@@ -33,6 +35,21 @@ export default {
         console.error("commute debug failed", error);
         return Response.json(
           { error: error instanceof Error ? error.message : "Commute debug unavailable" },
+          { status: 502, headers: JSON_HEADERS },
+        );
+      }
+    }
+
+    if (url.pathname === "/api/debug/bins-live") {
+      const config = readConfig(env);
+      try {
+        const today = zonedNow(new Date(), config.timezone).date;
+        const payload = await fetchBinsDebug(config, today);
+        return Response.json(payload, { headers: JSON_HEADERS });
+      } catch (error) {
+        console.error("bins debug failed", error);
+        return Response.json(
+          { error: error instanceof Error ? error.message : "Bins debug unavailable" },
           { status: 502, headers: JSON_HEADERS },
         );
       }
@@ -71,7 +88,7 @@ export default {
   },
 
   /**
-   * Fires every 2 minutes. The handler decides per source whether a refresh is
+    * Fires every 5 minutes. The handler decides per source whether a refresh is
    * actually due, which is what keeps the commute inside its morning window
    * and everything else inside its own cadence.
    */

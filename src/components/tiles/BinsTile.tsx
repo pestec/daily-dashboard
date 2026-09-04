@@ -62,6 +62,8 @@ export function BinsTile({ source, now }: Props) {
                 {bins.following.kinds.map((k) => KIND[k].label).join(", ")}
               </p>
             )}
+
+            <p className="text-caption text-fg-muted/70">via {bins.provider}</p>
           </div>
         )
       }

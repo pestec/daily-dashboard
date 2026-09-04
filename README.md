@@ -16,7 +16,7 @@ a nightly reload.
   costs API quota and the board never waits on a third party.
 
 ```
-Cron (every 2 min) ──► refresh whatever is due ──► KV
+Cron (every 5 min) ──► refresh whatever is due ──► KV
                                                    │
                     TV ──► GET /api/board ─────────┘  (cache only)
 ```
@@ -164,7 +164,7 @@ at a quiet hour the page reloads itself.
 | Tile | Source | Key | Refresh | Notes |
 | --- | --- | --- | --- | --- |
 | Weather | Open-Meteo | none | 15 min | Current, next 12 hours, next 3 days |
-| Commute | Google Routes API | optional | 2 min | Morning and afternoon windows, one direction at a time |
+| Commute | Google Routes API | optional | 5 min | Morning and afternoon windows, one direction at a time |
 | Disruption | TfL Unified API | none | 5 min | Line status plus road corridors |
 | Bins | Havering collection-day portal | none | 6 h | Falls back to manual schedule if unavailable |
 | Crypto | CoinGecko | optional | 5 min | |
@@ -174,6 +174,13 @@ at a quiet hour the page reloads itself.
 `/api/debug/commute-live` performs one live Google Routes call and returns both
 the raw upstream JSON and the parsed commute payload. It is intended for
 shape-verification while setting up route fields and should not be polled.
+
+### Bins debug endpoint
+
+`/api/debug/bins-live` performs one live bins-provider fetch and returns the
+raw upstream payload (for Havering, typically the API JSON response) plus the parsed bins
+result. Use it to confirm whether the board is showing live council data or a
+manual fallback.
 
 ### Bins
 

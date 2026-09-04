@@ -28,11 +28,11 @@
     "run_worker_first": ["/api/*"]
   },
 
-  // One tick every 2 minutes. The handler decides per source whether it is
+  // One tick every 5 minutes. The handler decides per source whether it is
   // actually due, so this stays cheap and commute routing is only called
   // inside the configured commute windows.
   "triggers": {
-    "crons": ["*/2 * * * *"]
+    "crons": ["*/5 * * * *"]
   },
 
   // Cache for every source. Create your own and paste the id here:

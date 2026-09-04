@@ -1,8 +1,8 @@
 import type { Bins } from "../../../shared/types.ts";
 import type { Config } from "../../config.ts";
-import { haveringProvider } from "./havering.ts";
+import { fetchHaveringDebug, haveringProvider } from "./havering.ts";
 import { manualProvider } from "./manual.ts";
-import type { BinProvider } from "./types.ts";
+import { ProviderUnavailableError, type BinProvider } from "./types.ts";
 
 export { ProviderUnavailableError } from "./types.ts";
 export type { BinProvider } from "./types.ts";
@@ -22,10 +22,25 @@ export async function fetchBins(config: Config, today: string): Promise<Bins> {
   if (selected !== manualProvider) {
     try {
       return await selected.fetch(config, today);
-    } catch {
+    } catch (error) {
+      if (!(error instanceof ProviderUnavailableError)) {
+        throw error;
+      }
       // Fall through to the schedule that does not depend on a council site.
     }
   }
 
   return await manualProvider.fetch(config, today);
+}
+
+export async function fetchBinsDebug(config: Config, today: string): Promise<unknown> {
+  if (config.bins.provider === haveringProvider.name) {
+    return await fetchHaveringDebug(today);
+  }
+
+  return {
+    provider: manualProvider.name,
+    parsed: await manualProvider.fetch(config, today),
+    raw: null,
+  };
 }
