@@ -22,6 +22,12 @@ import {
 import { CADENCE, fetchSource, refreshDue } from "./refresh.ts";
 import { activeCommuteSlot } from "./sources/commute.ts";
 
+const NULL_DATA_RETRY_COOLDOWN_SECONDS = 300;
+
+function secondsSince(iso: string, now: Date): number {
+  return (now.getTime() - new Date(iso).getTime()) / 1000;
+}
+
 /**
  * Reads one source out of KV.
  *
@@ -38,7 +44,24 @@ async function loadSource(
   ctx: ExecutionContext,
 ): Promise<Envelope<unknown> | null> {
   const cached = await readEnvelope<unknown>(env.BOARD_KV, key);
-  if (cached !== null) return cached;
+  if (cached !== null) {
+    if (
+      cached.data === null &&
+      cached.lastErrorAt !== undefined &&
+      secondsSince(cached.lastErrorAt, now) >= NULL_DATA_RETRY_COOLDOWN_SECONDS
+    ) {
+      try {
+        const data = await fetchSource(key, config, env, now);
+        const envelope: Envelope<unknown> = { data, fetchedAt: now.toISOString() };
+        ctx.waitUntil(writeEnvelope(env.BOARD_KV, key, envelope));
+        return envelope;
+      } catch {
+        // Keep the previous failure envelope to avoid amplifying outages.
+      }
+    }
+
+    return cached;
+  }
 
   try {
     const data = await fetchSource(key, config, env, now);
