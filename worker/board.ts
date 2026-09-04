@@ -28,6 +28,12 @@ function secondsSince(iso: string, now: Date): number {
   return (now.getTime() - new Date(iso).getTime()) / 1000;
 }
 
+function nullDataRetryCooldownSeconds(key: SourceKey): number {
+  // Bins can remain stuck for hours because its normal refresh cadence is long,
+  // so it retries immediately when the cached envelope has no data.
+  return key === "bins" ? 0 : NULL_DATA_RETRY_COOLDOWN_SECONDS;
+}
+
 /**
  * Reads one source out of KV.
  *
@@ -48,7 +54,7 @@ async function loadSource(
     if (
       cached.data === null &&
       cached.lastErrorAt !== undefined &&
-      secondsSince(cached.lastErrorAt, now) >= NULL_DATA_RETRY_COOLDOWN_SECONDS
+      secondsSince(cached.lastErrorAt, now) >= nullDataRetryCooldownSeconds(key)
     ) {
       try {
         const data = await fetchSource(key, config, env, now);
