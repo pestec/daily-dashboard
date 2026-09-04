@@ -3,7 +3,7 @@ import type { Config } from "./config.ts";
 import type { Env } from "./env.ts";
 import { envelopeAgeSeconds, readEnvelope, writeEnvelope, type Envelope } from "./kv.ts";
 import { fetchBins } from "./sources/bins/index.ts";
-import { fetchCommute, isInCommuteWindow, typicalCommute } from "./sources/commute.ts";
+import { activeCommuteSlot, fetchCommute, typicalCommuteForSlot } from "./sources/commute.ts";
 import { fetchCrypto } from "./sources/crypto.ts";
 import { fetchTfl } from "./sources/tfl.ts";
 import { fetchWeather } from "./sources/weather.ts";
@@ -20,7 +20,7 @@ interface Cadence {
 export const CADENCE: Record<SourceKey, Cadence> = {
   // Forecasts do not move quickly, and Open-Meteo is free but not ours to abuse.
   weather: { refreshSeconds: 900, ttlSeconds: 2_400 },
-  // Only ever called inside the morning window.
+  // Only ever called inside active commute windows.
   commute: { refreshSeconds: 120, ttlSeconds: 600 },
   tfl: { refreshSeconds: 300, ttlSeconds: 1_200 },
   bins: { refreshSeconds: 21_600, ttlSeconds: 172_800 },
@@ -40,14 +40,25 @@ export async function fetchSource(
       return await fetchWeather(config);
 
     case "commute": {
-      const apiKey = env.GOOGLE_ROUTES_API_KEY;
-      // Outside the window, and whenever no key is configured, the typical
-      // fallback is the answer -- and it costs nothing. The tile labels it as
-      // typical, so this is never passed off as a live reading.
-      if (apiKey === undefined || apiKey === "" || !isInCommuteWindow(config, now)) {
-        return typicalCommute(config);
+      const slot = activeCommuteSlot(config, now);
+      if (slot === null) {
+        // Outside commute windows this tile is intentionally hidden, and no
+        // routing call should be made.
+        return null;
       }
-      return await fetchCommute(config, apiKey);
+
+      const apiKey = env.GOOGLE_ROUTES_API_KEY;
+      // Inside an active window, no key or upstream failure degrades to a
+      // clearly labelled typical value rather than a dead tile.
+      if (apiKey === undefined || apiKey === "") {
+        return typicalCommuteForSlot(config, slot);
+      }
+
+      try {
+        return await fetchCommute(config, apiKey, slot);
+      } catch {
+        return typicalCommuteForSlot(config, slot);
+      }
     }
 
     case "tfl":

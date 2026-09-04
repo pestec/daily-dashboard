@@ -15,10 +15,13 @@ export interface Config {
   weather: { lat: number; lon: number; label: string };
   commute: {
     home: { lat: number; lon: number };
+    homeLabel: string;
     work: { lat: number; lon: number };
-    label: string;
-    windowStartMinutes: number;
-    windowEndMinutes: number;
+    workLabel: string;
+    morningStartMinutes: number;
+    morningEndMinutes: number;
+    afternoonStartMinutes: number;
+    afternoonEndMinutes: number;
     /** ISO-ish weekday numbers, 0 = Sunday. */
     days: number[];
   };
@@ -88,10 +91,19 @@ export function readConfig(env: Env): Config {
     },
     commute: {
       home: { lat: num(env.HOME_LAT, 51.5), lon: num(env.HOME_LON, -0.1) },
+      homeLabel: env.COMMUTE_HOME_LABEL || "Home",
       work: { lat: num(env.WORK_LAT, 51.51), lon: num(env.WORK_LON, -0.12) },
-      label: env.COMMUTE_LABEL || "Work",
-      windowStartMinutes: parseHhMm(env.COMMUTE_WINDOW_START || "") ?? 6 * 60,
-      windowEndMinutes: parseHhMm(env.COMMUTE_WINDOW_END || "") ?? 9 * 60 + 30,
+      workLabel: env.COMMUTE_LABEL || "Work",
+      morningStartMinutes:
+        parseHhMm(env.COMMUTE_MORNING_WINDOW_START || "") ??
+        parseHhMm(env.COMMUTE_WINDOW_START || "") ??
+        5 * 60 + 30,
+      morningEndMinutes:
+        parseHhMm(env.COMMUTE_MORNING_WINDOW_END || "") ??
+        parseHhMm(env.COMMUTE_WINDOW_END || "") ??
+        9 * 60,
+      afternoonStartMinutes: parseHhMm(env.COMMUTE_AFTERNOON_WINDOW_START || "") ?? 15 * 60,
+      afternoonEndMinutes: parseHhMm(env.COMMUTE_AFTERNOON_WINDOW_END || "") ?? 19 * 60,
       days: list(env.COMMUTE_DAYS).map(Number).filter(Number.isInteger),
     },
     tfl: {
@@ -103,7 +115,7 @@ export function readConfig(env: Env): Config {
       vsCurrency: (env.CRYPTO_VS || "gbp").toLowerCase(),
     },
     bins: {
-      provider: env.BIN_PROVIDER || "manual",
+      provider: env.BIN_PROVIDER || "havering",
       rules: parseBinRules(env.BIN_SCHEDULE),
     },
   };

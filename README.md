@@ -136,12 +136,12 @@ fallback and never calls the routing API.
 
 ## How it behaves
 
-**The board changes with the time of day.** Inside the commute window on a
-configured weekday it switches to a morning layout: the commute takes the
-top-right with a large colour-coded number, and weather shrinks to a wide band
-showing only the next 12 hours. The rest of the day, weather takes the largest
-cell and the commute shrinks to a single line. The Worker decides which, so the
-layout does not depend on the TV's clock.
+**The board changes with the time of day.** On configured weekdays, commute is
+active in two windows: 05:30-09:00 (Home -> Work) and 15:00-19:00
+(Work -> Home). During those windows it switches to the commute layout with one
+large live journey at a time. Outside those windows the commute tile is hidden
+entirely. The Worker decides which, so the layout does not depend on the TV's
+clock.
 
 **Each tile fails on its own.** Every source carries its own status, timestamp
 and TTL. A dead source greys one tile; a stale one keeps showing its last good
@@ -164,9 +164,9 @@ at a quiet hour the page reloads itself.
 | Tile | Source | Key | Refresh | Notes |
 | --- | --- | --- | --- | --- |
 | Weather | Open-Meteo | none | 15 min | Current, next 12 hours, next 3 days |
-| Commute | Google Routes API | optional | 2 min | Morning window only |
+| Commute | Google Routes API | optional | 2 min | Morning and afternoon windows, one direction at a time |
 | Disruption | TfL Unified API | none | 5 min | Line status plus road corridors |
-| Bins | Config schedule | none | 6 h | Pluggable provider, see below |
+| Bins | Havering collection-day portal | none | 6 h | Falls back to manual schedule if unavailable |
 | Crypto | CoinGecko | optional | 5 min | |
 
 ### Commute debug endpoint
@@ -177,8 +177,13 @@ shape-verification while setting up route fields and should not be polled.
 
 ### Bins
 
-Council endpoints are unreliable and change without notice, so the default
-provider is a recurring schedule you configure yourself, in `BIN_SCHEDULE`:
+Default provider is Havering's collection-day page for your configured street:
+
+`https://portal.havering.gov.uk/Process-Waste-CollectionDays/?type=CD&uprn=010096017137&usrn=21300590`
+
+It parses entries such as Domestic Waste and Recycling with their dates, then
+maps them into board kinds. If the portal is unavailable, it falls back to the
+manual recurring schedule configured in `BIN_SCHEDULE`:
 
 ```json
 [
@@ -190,13 +195,9 @@ provider is a recurring schedule you configure yourself, in `BIN_SCHEDULE`:
 `anchor` is any date you know a collection actually happened on; everything else
 is derived from it. Valid kinds are `general`, `recycling`, `garden`, `food`.
 
-`worker/sources/bins/havering.ts` is a deliberate stub implementing the same
-interface. Havering publishes no documented API for collection dates, so the
-only option would be scraping a page that changes without warning — which
-breaks quietly on a screen nobody is watching. Selecting it falls back to the
-manual schedule, and the tile reports which provider actually answered. To add
-a real one, implement `BinProvider` and register it in
-`worker/sources/bins/index.ts`.
+`worker/sources/bins/havering.ts` implements the scraper. Providers still share
+the same interface, so any future council/provider can be swapped in by
+registering it in `worker/sources/bins/index.ts`.
 
 ## Device setup
 

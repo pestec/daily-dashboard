@@ -3,7 +3,7 @@ import { assembleBoard } from "./board.ts";
 import { readConfig } from "./config.ts";
 import type { Env } from "./env.ts";
 import { refreshDue } from "./refresh.ts";
-import { fetchCommuteDebug } from "./sources/commute.ts";
+import { activeCommuteSlot, fetchCommuteDebug } from "./sources/commute.ts";
 
 const JSON_HEADERS = {
   // The board is a live view; nothing between here and the TV should hold on
@@ -26,7 +26,8 @@ export default {
 
       const config = readConfig(env);
       try {
-        const payload = await fetchCommuteDebug(config, apiKey);
+        const slot = activeCommuteSlot(config, new Date()) ?? "morning";
+        const payload = await fetchCommuteDebug(config, apiKey, slot);
         return Response.json(payload, { headers: JSON_HEADERS });
       } catch (error) {
         console.error("commute debug failed", error);

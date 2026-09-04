@@ -15,9 +15,10 @@ interface Props {
 
 export function Board({ payload, mode, now }: Props) {
   const nowMs = now.getTime();
+  const showCommute = mode === "morning";
 
   return (
-    <div className="board" data-mode={mode}>
+    <div className="board" data-mode={mode} data-commute-active={showCommute ? "true" : "false"}>
       <TileErrorBoundary label="Clock" className="area-clock">
         <ClockTile now={now} />
       </TileErrorBoundary>
@@ -26,9 +27,11 @@ export function Board({ payload, mode, now }: Props) {
         <WeatherTile source={payload?.weather ?? null} now={nowMs} mode={mode} />
       </TileErrorBoundary>
 
-      <TileErrorBoundary label="Commute" className="area-commute">
-        <CommuteTile source={payload?.commute ?? null} now={nowMs} />
-      </TileErrorBoundary>
+      {showCommute && (
+        <TileErrorBoundary label="Commute" className="area-commute">
+          <CommuteTile source={payload?.commute ?? null} now={nowMs} />
+        </TileErrorBoundary>
+      )}
 
       <TileErrorBoundary label="Disruption" className="area-tfl">
         <TflTile source={payload?.tfl ?? null} now={nowMs} />

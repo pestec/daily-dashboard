@@ -53,6 +53,10 @@ function failed<T>(ttlSeconds: number, error: string): Source<T> {
   return { status: "error", data: null, fetchedAt: null, ttlSeconds, error };
 }
 
+function disabled<T>(ttlSeconds: number): Source<T> {
+  return { status: "disabled", data: null, fetchedAt: null, ttlSeconds };
+}
+
 function isoDate(offsetDays: number): string {
   const d = new Date();
   d.setDate(d.getDate() + offsetDays);
@@ -123,12 +127,6 @@ const commuteLive: Commute = {
   state: "bad",
 };
 
-const commuteTypical: Commute = {
-  kind: "typical",
-  destination: "Work",
-  typicalMinutes: 32,
-};
-
 const tfl: Tfl = {
   items: [
     {
@@ -172,7 +170,7 @@ function base(mode: BoardMode): BoardPayload {
     generatedAt: new Date().toISOString(),
     meta: { timezone: "Europe/London", mode },
     weather: ok(weather, 900),
-    commute: ok(mode === "morning" ? commuteLive : commuteTypical, 180),
+    commute: mode === "morning" ? ok(commuteLive, 180) : disabled(180),
     tfl: ok(mode === "morning" ? tfl : tflAllClear, 300),
     bins: ok(bins, 21_600, 4_000),
     crypto: ok(crypto, 300),

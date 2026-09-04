@@ -20,7 +20,7 @@ import {
   type Envelope,
 } from "./kv.ts";
 import { CADENCE, fetchSource, refreshDue } from "./refresh.ts";
-import { isInCommuteWindow } from "./sources/commute.ts";
+import { activeCommuteSlot } from "./sources/commute.ts";
 
 /**
  * Reads one source out of KV.
@@ -83,7 +83,7 @@ function overdue(
 }
 
 export function boardMode(config: Config, now: Date): BoardMode {
-  return isInCommuteWindow(config, now) ? "morning" : "ambient";
+  return activeCommuteSlot(config, now) === null ? "ambient" : "morning";
 }
 
 export async function assembleBoard(
@@ -112,11 +112,21 @@ export async function assembleBoard(
   const sourceFor = <T>(key: SourceKey): Source<T> =>
     toSource(envelopes.get(key) as Envelope<T> | null | undefined ?? null, CADENCE[key].ttlSeconds);
 
+  const commuteSlot = activeCommuteSlot(config, now);
+  const commuteSource = commuteSlot === null
+    ? {
+        status: "disabled" as const,
+        data: null,
+        fetchedAt: null,
+        ttlSeconds: CADENCE.commute.ttlSeconds,
+      } satisfies Source<Commute>
+    : sourceFor<Commute>("commute");
+
   return {
     generatedAt: now.toISOString(),
     meta: { timezone: config.timezone, mode: boardMode(config, now) },
     weather: sourceFor<Weather>("weather"),
-    commute: sourceFor<Commute>("commute"),
+    commute: commuteSource,
     tfl: sourceFor<Tfl>("tfl"),
     bins: sourceFor<Bins>("bins"),
     crypto: sourceFor<Crypto>("crypto"),

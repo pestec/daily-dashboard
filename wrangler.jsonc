@@ -30,7 +30,7 @@
 
   // One tick every 2 minutes. The handler decides per source whether it is
   // actually due, so this stays cheap and commute routing is only called
-  // inside the configured morning window.
+  // inside the configured commute windows.
   "triggers": {
     "crons": ["*/2 * * * *"]
   },
@@ -65,14 +65,19 @@
     "WORK_LAT": "51.5100",
     "WORK_LON": "0.1200",
     "COMMUTE_LABEL": "Work",
-    "COMMUTE_WINDOW_START": "06:00",
-    "COMMUTE_WINDOW_END": "09:30",
+    "COMMUTE_HOME_LABEL": "Home",
+    "COMMUTE_MORNING_WINDOW_START": "05:30",
+    "COMMUTE_MORNING_WINDOW_END": "09:00",
+    "COMMUTE_AFTERNOON_WINDOW_START": "15:00",
+    "COMMUTE_AFTERNOON_WINDOW_END": "19:00",
+    "COMMUTE_WINDOW_START": "05:30",
+    "COMMUTE_WINDOW_END": "09:00",
     "COMMUTE_DAYS": "1,2,3,4,5",
     "TFL_ROAD_IDS": "a12,a13,a406",
     "TFL_LINE_MODES": "tube,dlr,elizabeth-line,overground",
     "CRYPTO_IDS": "bitcoin,ethereum,solana",
     "CRYPTO_VS": "gbp",
-    "BIN_PROVIDER": "manual",
+    "BIN_PROVIDER": "havering",
     // Placeholder pattern: two fortnightly rounds offset by a week. Replace
     // "anchor" with a date you know a collection actually happened on.
     "BIN_SCHEDULE": "[{\"kinds\":[\"general\",\"food\"],\"anchor\":\"2026-01-07\",\"intervalDays\":14},{\"kinds\":[\"recycling\",\"garden\",\"food\"],\"anchor\":\"2026-01-14\",\"intervalDays\":14}]",

@@ -18,9 +18,16 @@ interface RouteTiming {
   distanceMeters: number | null;
 }
 
+export type CommuteSlot = "morning" | "afternoon";
+
+interface CommuteLeg {
+  origin: { lat: number; lon: number; label: string };
+  destination: { lat: number; lon: number; label: string };
+}
+
 interface RoutingProvider {
   label: string;
-  fetchTiming(config: Config, apiKey: string): Promise<{ raw: unknown; timing: RouteTiming }>;
+  fetchTiming(leg: CommuteLeg, apiKey: string): Promise<{ raw: unknown; timing: RouteTiming }>;
 }
 
 const GOOGLE_ROUTES_URL = "https://routes.googleapis.com/directions/v2:computeRoutes";
@@ -29,12 +36,41 @@ const TYPICAL_FALLBACK_MINUTES = 30;
 
 /** Inside the configured window on a configured day, and only then, is the
  *  routing API worth spending quota on. */
-export function isInCommuteWindow(config: Config, now: Date): boolean {
+export function activeCommuteSlot(config: Config, now: Date): CommuteSlot | null {
   const { minutesOfDay, weekday } = zonedNow(now, config.timezone);
-  const { windowStartMinutes, windowEndMinutes, days } = config.commute;
+  const {
+    morningStartMinutes,
+    morningEndMinutes,
+    afternoonStartMinutes,
+    afternoonEndMinutes,
+    days,
+  } = config.commute;
 
-  if (days.length > 0 && !days.includes(weekday)) return false;
-  return minutesOfDay >= windowStartMinutes && minutesOfDay < windowEndMinutes;
+  if (days.length > 0 && !days.includes(weekday)) return null;
+  if (minutesOfDay >= morningStartMinutes && minutesOfDay < morningEndMinutes) {
+    return "morning";
+  }
+  if (minutesOfDay >= afternoonStartMinutes && minutesOfDay < afternoonEndMinutes) {
+    return "afternoon";
+  }
+  return null;
+}
+
+export function isInCommuteWindow(config: Config, now: Date): boolean {
+  return activeCommuteSlot(config, now) !== null;
+}
+
+export function legForSlot(config: Config, slot: CommuteSlot): CommuteLeg {
+  if (slot === "morning") {
+    return {
+      origin: { ...config.commute.home, label: config.commute.homeLabel },
+      destination: { ...config.commute.work, label: config.commute.workLabel },
+    };
+  }
+  return {
+    origin: { ...config.commute.work, label: config.commute.workLabel },
+    destination: { ...config.commute.home, label: config.commute.homeLabel },
+  };
 }
 
 /**
@@ -56,7 +92,16 @@ export function trafficState(delayMinutes: number, freeFlowMinutes: number): Tra
 export function typicalCommute(config: Config): Commute {
   return {
     kind: "typical",
-    destination: config.commute.label,
+    destination: config.commute.workLabel,
+    typicalMinutes: TYPICAL_FALLBACK_MINUTES,
+  };
+}
+
+export function typicalCommuteForSlot(config: Config, slot: CommuteSlot): Commute {
+  const leg = legForSlot(config, slot);
+  return {
+    kind: "typical",
+    destination: leg.destination.label,
     typicalMinutes: TYPICAL_FALLBACK_MINUTES,
   };
 }
@@ -93,17 +138,16 @@ export function parseGoogleRouteTiming(body: GoogleRoutesResponse): RouteTiming 
   };
 }
 
-function computeRoutesBody(config: Config): Record<string, unknown> {
-  const { home, work } = config.commute;
+function computeRoutesBody(leg: CommuteLeg): Record<string, unknown> {
   return {
     origin: {
       location: {
-        latLng: { latitude: home.lat, longitude: home.lon },
+        latLng: { latitude: leg.origin.lat, longitude: leg.origin.lon },
       },
     },
     destination: {
       location: {
-        latLng: { latitude: work.lat, longitude: work.lon },
+        latLng: { latitude: leg.destination.lat, longitude: leg.destination.lon },
       },
     },
     travelMode: "DRIVE",
@@ -113,7 +157,7 @@ function computeRoutesBody(config: Config): Record<string, unknown> {
 
 const googleRoutesProvider: RoutingProvider = {
   label: "Google Routes",
-  async fetchTiming(config: Config, apiKey: string): Promise<{ raw: unknown; timing: RouteTiming }> {
+  async fetchTiming(leg: CommuteLeg, apiKey: string): Promise<{ raw: unknown; timing: RouteTiming }> {
     const raw = await fetchJson<GoogleRoutesResponse>(GOOGLE_ROUTES_URL, {
       label: "Google Routes",
       method: "POST",
@@ -122,7 +166,7 @@ const googleRoutesProvider: RoutingProvider = {
         "X-Goog-Api-Key": apiKey,
         "X-Goog-FieldMask": GOOGLE_FIELD_MASK,
       },
-      body: JSON.stringify(computeRoutesBody(config)),
+      body: JSON.stringify(computeRoutesBody(leg)),
     });
     return { raw, timing: parseGoogleRouteTiming(raw) };
   },
@@ -130,14 +174,15 @@ const googleRoutesProvider: RoutingProvider = {
 
 const ACTIVE_ROUTING_PROVIDER: RoutingProvider = googleRoutesProvider;
 
-function toLiveCommute(config: Config, timing: RouteTiming): Commute {
+function toLiveCommute(config: Config, timing: RouteTiming, slot: CommuteSlot): Commute {
+  const leg = legForSlot(config, slot);
   const durationMinutes = Math.round(timing.durationSeconds / 60);
   const freeFlowMinutes = Math.round(timing.staticDurationSeconds / 60);
   const delayMinutes = Math.round(timing.delaySeconds / 60);
 
   return {
     kind: "live",
-    destination: config.commute.label,
+    destination: leg.destination.label,
     durationMinutes,
     freeFlowMinutes,
     delayMinutes,
@@ -145,19 +190,26 @@ function toLiveCommute(config: Config, timing: RouteTiming): Commute {
   };
 }
 
-export async function fetchCommute(config: Config, apiKey: string): Promise<Commute> {
-  const { timing } = await ACTIVE_ROUTING_PROVIDER.fetchTiming(config, apiKey);
-  return toLiveCommute(config, timing);
+export async function fetchCommute(
+  config: Config,
+  apiKey: string,
+  slot: CommuteSlot,
+): Promise<Commute> {
+  const leg = legForSlot(config, slot);
+  const { timing } = await ACTIVE_ROUTING_PROVIDER.fetchTiming(leg, apiKey);
+  return toLiveCommute(config, timing, slot);
 }
 
 export async function fetchCommuteDebug(
   config: Config,
   apiKey: string,
+  slot: CommuteSlot,
 ): Promise<{ provider: string; parsed: Commute; raw: unknown }> {
-  const { raw, timing } = await ACTIVE_ROUTING_PROVIDER.fetchTiming(config, apiKey);
+  const leg = legForSlot(config, slot);
+  const { raw, timing } = await ACTIVE_ROUTING_PROVIDER.fetchTiming(leg, apiKey);
   return {
     provider: "google-routes",
-    parsed: toLiveCommute(config, timing),
+    parsed: toLiveCommute(config, timing, slot),
     raw,
   };
 }
