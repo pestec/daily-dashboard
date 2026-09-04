@@ -15,7 +15,7 @@ interface Props {
  */
 export function ClockTile({ now }: Props) {
   return (
-    <section className="area-clock @container flex min-h-0 min-w-0 flex-col justify-center gap-4 overflow-hidden rounded-2xl border border-border/40 bg-surface p-8">
+    <section className="area-clock glass-panel @container flex min-h-0 min-w-0 flex-col justify-center gap-4 overflow-hidden rounded-2xl p-8">
       <time
         className="tnum leading-none font-semibold"
         style={{ fontSize: "min(180px, 30cqw)" }}

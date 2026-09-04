@@ -44,7 +44,7 @@ export function BinsTile({ source, now }: Props) {
                 {bins.next.kinds.map((kind) => (
                   <li
                     key={kind}
-                    className="flex items-center gap-3 rounded-lg bg-surface-2 px-4 py-2"
+                    className="glass-subpanel flex items-center gap-3 rounded-lg px-4 py-2"
                   >
                     <span
                       aria-hidden="true"

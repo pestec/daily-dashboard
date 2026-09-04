@@ -61,7 +61,7 @@ export function WeatherTile({ source, now, mode }: Props) {
                 {weather.daily.map((day) => (
                   <li
                     key={day.date}
-                    className="flex items-center gap-5 rounded-xl bg-surface-2 px-6 py-4"
+                    className="glass-subpanel flex items-center gap-5 rounded-xl px-6 py-4"
                   >
                     <WeatherIcon
                       code={day.code}
