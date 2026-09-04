@@ -26,4 +26,8 @@ interface Secrets {
   COINGECKO_API_KEY?: string;
 }
 
-export type Env = Vars & Secrets;
+interface OptionalBindings {
+  BROWSER?: Fetcher;
+}
+
+export type Env = Vars & Secrets & OptionalBindings;

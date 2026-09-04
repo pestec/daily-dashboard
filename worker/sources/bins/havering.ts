@@ -1,12 +1,14 @@
+import puppeteer from "@cloudflare/puppeteer";
 import type { BinCollection, BinKind, Bins } from "../../../shared/types.ts";
 import type { Config } from "../../config.ts";
+import type { Env } from "../../env.ts";
 import { type BinProvider, ProviderUnavailableError } from "./types.ts";
 
 const HAVERING_COLLECTION_URL =
   "https://portal.havering.gov.uk/Process-Waste-CollectionDays/?type=CD&uprn=010096017137&usrn=21300590";
 const LABEL_PATTERNS: ReadonlyArray<{ pattern: RegExp; kind: BinKind }> = [
-  { pattern: /Domestic\s*Waste/gi, kind: "general" },
-  { pattern: /Recycling/gi, kind: "recycling" },
+  { pattern: /Domestic\s*Waste/i, kind: "general" },
+  { pattern: /Recycling/i, kind: "recycling" },
 ];
 
 const LONG_DATE_PATTERN =
@@ -81,14 +83,15 @@ function addCollection(
   grouped.set(date, kinds);
 }
 
-function extractDateAfterLabel(tail: string): string | null {
-  const longDateMatch = LONG_DATE_PATTERN.exec(tail);
+function extractDate(value: string): string | null {
+  const compact = value.replace(/\s+/g, " ").trim();
+  const longDateMatch = LONG_DATE_PATTERN.exec(compact);
   if (longDateMatch?.[1] !== undefined) {
     const parsed = parseHaveringDate(longDateMatch[1]);
     if (parsed !== null) return parsed;
   }
 
-  const slashDateMatch = SLASH_DATE_PATTERN.exec(tail);
+  const slashDateMatch = SLASH_DATE_PATTERN.exec(compact);
   if (slashDateMatch?.[1] !== undefined) {
     const parsed = parseSlashDate(slashDateMatch[1]);
     if (parsed !== null) return parsed;
@@ -97,25 +100,27 @@ function extractDateAfterLabel(tail: string): string | null {
   return null;
 }
 
-export function extractHaveringCollections(html: string): BinCollection[] {
-  const text = html
-    .replace(/&nbsp;/gi, " ")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
+interface RenderedRow {
+  service: string;
+  date: string;
+}
+
+function kindForService(service: string): BinKind | null {
+  for (const { pattern, kind } of LABEL_PATTERNS) {
+    if (pattern.test(service)) return kind;
+  }
+  return null;
+}
+
+export function extractHaveringCollectionsFromRows(rows: ReadonlyArray<RenderedRow>): BinCollection[] {
   const grouped = new Map<string, Set<BinKind>>();
 
-  for (const { pattern, kind } of LABEL_PATTERNS) {
-    const matches = text.matchAll(pattern);
-    for (const match of matches) {
-      const index = match.index;
-      if (index === undefined) continue;
-      const label = match[0] ?? "";
-      const tail = text.slice(index + label.length, index + label.length + 160);
-      const isoDate = extractDateAfterLabel(tail);
-      if (isoDate === null) continue;
-      addCollection(grouped, isoDate, kind);
-    }
+  for (const row of rows) {
+    const kind = kindForService(row.service);
+    if (kind === null) continue;
+    const isoDate = extractDate(row.date);
+    if (isoDate === null) continue;
+    addCollection(grouped, isoDate, kind);
   }
 
   return [...grouped.entries()]
@@ -123,23 +128,50 @@ export function extractHaveringCollections(html: string): BinCollection[] {
     .map(([date, kinds]) => ({ date, kinds: [...kinds] }));
 }
 
-async function fetchCollectionsFromHtml(): Promise<{ raw: string; collections: BinCollection[] }> {
-  const response = await fetch(HAVERING_COLLECTION_URL);
-  if (!response.ok) {
-    throw new ProviderUnavailableError(`Havering responded ${response.status}`);
+async function fetchCollectionsFromRenderedPage(
+  env: Env,
+): Promise<{ raw: unknown; collections: BinCollection[] }> {
+  if (env.BROWSER === undefined) {
+    throw new ProviderUnavailableError("Browser rendering binding is not configured");
   }
 
-  const html = await response.text();
-  return {
-    raw: html,
-    collections: extractHaveringCollections(html),
-  };
+  const browser = await puppeteer.launch(env.BROWSER);
+  try {
+    const page = await browser.newPage();
+    await page.goto(HAVERING_COLLECTION_URL, { waitUntil: "domcontentloaded" });
+    await page.waitForSelector("#missedWastes tbody tr td", { timeout: 20_000 });
+
+    const rows = await page.$$eval("#missedWastes tbody tr", (trs) =>
+      trs
+        .map((tr) => {
+          const cells = [...tr.querySelectorAll("td")]
+            .map((td) => (td.textContent ?? "").replace(/\s+/g, " ").trim())
+            .filter((text) => text.length > 0);
+
+          return {
+            service: cells[1] ?? "",
+            date: cells[2] ?? "",
+          };
+        })
+        .filter((row) => row.service.length > 0 && row.date.length > 0),
+    );
+
+    return {
+      raw: { rows },
+      collections: extractHaveringCollectionsFromRows(rows),
+    };
+  } catch {
+    throw new ProviderUnavailableError("Rendered Havering page did not expose collection rows");
+  } finally {
+    await browser.close();
+  }
 }
 
 export async function fetchHaveringDebug(
   _today: string,
+  env: Env,
 ): Promise<{ provider: string; parsed: Bins; raw: unknown }> {
-  const htmlResult = await fetchCollectionsFromHtml();
+  const htmlResult = await fetchCollectionsFromRenderedPage(env);
   const raw = htmlResult.raw;
   const collections = htmlResult.collections;
 
@@ -159,8 +191,8 @@ export async function fetchHaveringDebug(
 export const haveringProvider: BinProvider = {
   name: "havering",
 
-  async fetch(_config: Config, today: string): Promise<Bins> {
-    const debug = await fetchHaveringDebug(today);
+  async fetch(_config: Config, env: Env, today: string): Promise<Bins> {
+    const debug = await fetchHaveringDebug(today, env);
     return debug.parsed;
   },
 };

@@ -44,7 +44,7 @@ export default {
       const config = readConfig(env);
       try {
         const today = zonedNow(new Date(), config.timezone).date;
-        const payload = await fetchBinsDebug(config, today);
+        const payload = await fetchBinsDebug(config, env, today);
         return Response.json(payload, { headers: JSON_HEADERS });
       } catch (error) {
         console.error("bins debug failed", error);

@@ -23,7 +23,7 @@ export const CADENCE: Record<SourceKey, Cadence> = {
   // Only ever called inside active commute windows.
   commute: { refreshSeconds: 300, ttlSeconds: 600 },
   tfl: { refreshSeconds: 300, ttlSeconds: 1_200 },
-  bins: { refreshSeconds: 21_600, ttlSeconds: 172_800 },
+  bins: { refreshSeconds: 302_400, ttlSeconds: 1_209_600 },
   crypto: { refreshSeconds: 300, ttlSeconds: 1_200 },
 };
 
@@ -65,7 +65,7 @@ export async function fetchSource(
       return await fetchTfl(config);
 
     case "bins":
-      return await fetchBins(config, zonedNow(now, config.timezone).date);
+      return await fetchBins(config, env, zonedNow(now, config.timezone).date);
 
     case "crypto":
       return await fetchCrypto(config, env.COINGECKO_API_KEY);

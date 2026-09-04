@@ -120,6 +120,13 @@ weather.
 
 Every variable is documented in [`.env.example`](.env.example).
 
+### 3.5 Browser Rendering for bins
+
+The Havering provider now depends on Cloudflare Browser Rendering. Keep the
+`browser.binding` entry in [`wrangler.jsonc`](wrangler.jsonc) as `BROWSER`, and
+enable Browser Rendering for the Worker in Cloudflare if your account requires
+an explicit toggle.
+
 ### 4. Secrets (both optional)
 
 ```bash
@@ -166,7 +173,7 @@ at a quiet hour the page reloads itself.
 | Weather | Open-Meteo | none | 15 min | Current, next 12 hours, next 3 days |
 | Commute | Google Routes API | optional | 5 min | Morning and afternoon windows, one direction at a time |
 | Disruption | TfL Unified API | none | 5 min | Line status plus road corridors |
-| Bins | Havering collection-day portal | none | 6 h | Falls back to manual schedule if unavailable |
+| Bins | Havering collection-day portal (rendered) | none | ~3.5 days | Browser-rendered scrape, then falls back to manual schedule |
 | Crypto | CoinGecko | optional | 5 min | |
 
 ### Commute debug endpoint
@@ -178,9 +185,9 @@ shape-verification while setting up route fields and should not be polled.
 ### Bins debug endpoint
 
 `/api/debug/bins-live` performs one live bins-provider fetch and returns the
-raw upstream payload (for Havering, typically the API JSON response) plus the parsed bins
-result. Use it to confirm whether the board is showing live council data or a
-manual fallback.
+raw provider payload plus the parsed bins result. In rendered Havering mode the
+raw payload is the extracted table rows from the browser session, which helps
+confirm exactly what was visible after page JavaScript ran.
 
 ### Bins
 
@@ -188,9 +195,11 @@ Default provider is Havering's collection-day page for your configured street:
 
 `https://portal.havering.gov.uk/Process-Waste-CollectionDays/?type=CD&uprn=010096017137&usrn=21300590`
 
-It parses entries such as Domestic Waste and Recycling with their dates, then
-maps them into board kinds. If the portal is unavailable, it falls back to the
-manual recurring schedule configured in `BIN_SCHEDULE`:
+It uses Cloudflare Browser Rendering to load the page as a real browser,
+waits for the rendered table rows, then extracts Domestic Waste and Recycling
+dates into board kinds. If browser rendering is unavailable, or rows cannot be
+read, it falls back to the manual recurring schedule configured in
+`BIN_SCHEDULE`:
 
 ```json
 [
