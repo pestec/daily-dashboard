@@ -66,16 +66,17 @@ without breaking anything.
 
 ## Deploying
 
-### 1. Create the KV namespace
+### 1. KV namespace
 
-The Worker will not deploy until this exists — `wrangler.jsonc` ships with a
-placeholder id.
+Already created and wired up in `wrangler.jsonc`. If you ever need a fresh one
+(a different account, say):
 
 ```bash
 npx wrangler kv namespace create BOARD_KV
 ```
 
-Paste the returned id into `kv_namespaces[0].id` in `wrangler.jsonc`.
+…and paste the returned id into `kv_namespaces[0].id`. The id is an identifier,
+not a credential — it is safe to commit, and Cloudflare's own templates do.
 
 ### 2. Deploy
 
