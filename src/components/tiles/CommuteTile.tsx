@@ -72,8 +72,9 @@ export function CommuteTile({ source, now }: Props) {
               </span>
               <span className="text-body text-fg-muted">min typical</span>
             </p>
+            <p className="text-body text-fg-muted">to {commute.destination}</p>
             <p className="text-caption text-fg-muted/70">
-              to {commute.destination} · not checked outside mornings
+              outside morning window
             </p>
           </div>
         )
