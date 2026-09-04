@@ -167,9 +167,21 @@ export async function fetchTfl(config: Config): Promise<Tfl> {
       : new Error("TfL returned nothing");
   }
 
-  const items = all.filter((item) => item.severity !== "good");
-  // Severe first, so the three that fit on screen are the three that matter.
-  items.sort((a, b) => (a.severity === b.severity ? 0 : a.severity === "severe" ? -1 : 1));
+  const bySeverity: Record<DisruptionSeverity, number> = {
+    severe: 0,
+    minor: 1,
+    good: 2,
+  };
+  const items = [...all];
+  // Show the monitored network, but keep active disruption at the top.
+  items.sort((a, b) => {
+    const severityDiff = bySeverity[a.severity] - bySeverity[b.severity];
+    if (severityDiff !== 0) return severityDiff;
+    return a.name.localeCompare(b.name);
+  });
 
-  return { items, goodCount: all.length - items.length };
+  return {
+    items,
+    goodCount: all.filter((item) => item.severity === "good").length,
+  };
 }

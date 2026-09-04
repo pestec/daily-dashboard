@@ -9,7 +9,7 @@ const SEVERITY: Record<DisruptionSeverity, { dot: string; text: string }> = {
 
 /** The tile is two grid rows tall; compact rows let it show the top six
  *  disruptions before collapsing the remainder into the header count. */
-const MAX_ITEMS = 6;
+const MAX_ITEMS = 5;
 
 interface Props {
   source: Source<Tfl> | null;
@@ -48,11 +48,11 @@ export function TflTile({ source, now }: Props) {
             </p>
           </div>
         ) : (
-          <ul className="flex min-h-0 flex-1 flex-col justify-center gap-2">
+          <ul className="flex min-h-0 flex-1 flex-col justify-start gap-2 pt-1">
             {tfl.items.slice(0, MAX_ITEMS).map((item) => (
               <li
                 key={`${item.kind}-${item.id}`}
-                className="glass-subpanel flex items-center gap-3 rounded-lg px-3 py-2"
+                className="glass-subpanel flex items-center gap-3 rounded-lg px-3 py-1.5"
               >
                 {item.kind === "line" && item.color !== undefined ? (
                   <span
@@ -66,9 +66,9 @@ export function TflTile({ source, now }: Props) {
                     className={`size-4 shrink-0 rounded-full ${SEVERITY[item.severity].dot}`}
                   />
                 )}
-                <span className="shrink-0 text-caption font-semibold">{item.name}</span>
+                <span className="shrink-0 text-[20px] font-semibold">{item.name}</span>
                 <span
-                  className={`truncate text-caption ${SEVERITY[item.severity].text}`}
+                  className={`truncate text-[20px] ${SEVERITY[item.severity].text}`}
                 >
                   {item.status}
                 </span>

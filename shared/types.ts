@@ -104,7 +104,7 @@ export interface DisruptionItem {
 }
 
 export interface Tfl {
-  /** Only the things that are not running normally. */
+  /** Monitored lines and roads, sorted by disruption severity. */
   items: DisruptionItem[];
   /** How many lines and roads were checked and found fine, so the tile can say
    *  "all clear" honestly instead of just showing nothing. */
