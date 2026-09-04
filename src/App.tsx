@@ -5,6 +5,7 @@ import { useBoard } from "./hooks/useBoard.ts";
 import { useBurnInShift } from "./hooks/useBurnInShift.ts";
 import { useClock } from "./hooks/useClock.ts";
 import { useDailyReload } from "./hooks/useDailyReload.ts";
+import { useFitScale } from "./hooks/useFitScale.ts";
 import { useNightDim } from "./hooks/useNightDim.ts";
 import { debugEnabled, modeOverride } from "./lib/params.ts";
 
@@ -13,6 +14,7 @@ export function App() {
   const board = useBoard();
   const { payload } = board;
   const burnIn = useBurnInShift();
+  const fitScale = useFitScale();
   const night = useNightDim(now);
 
   useDailyReload();
@@ -35,6 +37,7 @@ export function App() {
         {
           "--burn-x": `${burnIn.x}px`,
           "--burn-y": `${burnIn.y}px`,
+          "--fit-scale": fitScale,
         } as CSSProperties
       }
     >
