@@ -1,0 +1,123 @@
+@import "tailwindcss";
+
+/* ---------------------------------------------------------------------------
+   Design tokens. Palette is the ui-ux-pro-max "Financial Dashboard" dark set
+   crossed with the Dark Mode (OLED) style: near-black ground, no white
+   surfaces, high contrast, no glow.
+
+   Sizes are tuned for a 1920x1080 TV read from ~3 metres. 24px is the hard
+   floor for any text on this screen.
+--------------------------------------------------------------------------- */
+@theme {
+  --color-bg: #020617;
+  --color-surface: #0e1223;
+  --color-surface-2: #1a1e2f;
+  --color-fg: #f8fafc;
+  --color-fg-muted: #94a3b8;
+  --color-border: #334155;
+  --color-good: #22c55e;
+  --color-warn: #f59e0b;
+  --color-bad: #ef4444;
+  --color-accent: #3b82f6;
+
+  --font-sans: "Fira Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Fira Code", ui-monospace, monospace;
+
+  --text-display-xl: 180px;
+  --text-display-xl--line-height: 0.9;
+  --text-display-l: 140px;
+  --text-display-l--line-height: 0.92;
+  --text-headline: 72px;
+  --text-headline--line-height: 1;
+  --text-title: 32px;
+  --text-title--line-height: 1.2;
+  --text-body: 28px;
+  --text-body--line-height: 1.4;
+  --text-caption: 24px;
+  --text-caption--line-height: 1.3;
+}
+
+/* Night dim. Overriding the same custom properties lets every Tailwind
+   utility follow along, with no filter on a large composited layer -- those
+   are exactly the thing that degrades over a multi-week session. */
+[data-night="true"] {
+  --color-surface: #080c18;
+  --color-surface-2: #0e1424;
+  --color-fg: #b6c2d1;
+  --color-fg-muted: #7a89a0;
+  --color-border: #1e293b;
+  --color-good: #2f9e56;
+  --color-warn: #b07d1c;
+  --color-bad: #d4605a;
+  --color-accent: #5a86d6;
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  body {
+    background-color: var(--color-bg);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+    /* Nothing here is interactive; a stray selection highlight from a rogue
+       remote keypress would just sit there for days. */
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  /* Digits must not reflow on every tick -- visible from across a room. */
+  .tnum {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Board grid. 12 columns x 8 rows over the full 1920x1080, and the whole
+   thing swaps template between the two modes.
+--------------------------------------------------------------------------- */
+.board {
+  display: grid;
+  width: 1920px;
+  height: 1080px;
+  padding: 32px;
+  gap: 24px;
+  grid-template-columns: repeat(12, 1fr);
+  grid-template-rows: repeat(8, 1fr);
+}
+
+.board[data-mode="ambient"] {
+  grid-template-areas:
+    "weather weather weather weather weather weather weather weather clock   clock   clock   clock"
+    "weather weather weather weather weather weather weather weather clock   clock   clock   clock"
+    "weather weather weather weather weather weather weather weather clock   clock   clock   clock"
+    "weather weather weather weather weather weather weather weather bins    bins    bins    bins"
+    "weather weather weather weather weather weather weather weather bins    bins    bins    bins"
+    "weather weather weather weather weather weather weather weather bins    bins    bins    bins"
+    "commute commute commute tfl     tfl     tfl     tfl     tfl     crypto  crypto  crypto  crypto"
+    "commute commute commute tfl     tfl     tfl     tfl     tfl     crypto  crypto  crypto  crypto";
+}
+
+.board[data-mode="morning"] {
+  grid-template-areas:
+    "clock   clock   clock   commute commute commute commute commute commute commute commute commute"
+    "clock   clock   clock   commute commute commute commute commute commute commute commute commute"
+    "clock   clock   clock   commute commute commute commute commute commute commute commute commute"
+    "weather weather weather weather weather weather weather weather bins    bins    bins    bins"
+    "weather weather weather weather weather weather weather weather bins    bins    bins    bins"
+    "weather weather weather weather weather weather weather weather bins    bins    bins    bins"
+    "tfl     tfl     tfl     tfl     tfl     tfl     tfl     crypto  crypto  crypto  crypto  crypto"
+    "tfl     tfl     tfl     tfl     tfl     tfl     tfl     crypto  crypto  crypto  crypto  crypto";
+}
+
+.area-weather { grid-area: weather; }
+.area-clock   { grid-area: clock; }
+.area-bins    { grid-area: bins; }
+.area-commute { grid-area: commute; }
+.area-tfl     { grid-area: tfl; }
+.area-crypto  { grid-area: crypto; }

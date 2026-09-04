@@ -1,0 +1,15 @@
+# local Claude Code config and vendored skill packs - not part of the app
+.claude/
+
+node_modules
+dist
+.wrangler
+.dev.vars
+.env
+.env.*
+!.env.example
+*.local
+*.log
+.DS_Store
+tsconfig*.tsbuildinfo
+worker-configuration.d.ts

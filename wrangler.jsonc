@@ -1,0 +1,58 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "daily-dashboard",
+  "main": "./worker/index.ts",
+  "compatibility_date": "2026-09-03",
+
+  "assets": {
+    "binding": "ASSETS",
+    // The Vite plugin fills in `directory` at build time from the client output.
+    "not_found_handling": "single-page-application",
+    // Guarantees /api/* reaches the Worker instead of being swallowed by the
+    // SPA fallback. Everything else is served straight from assets and never
+    // wakes the Worker at all.
+    "run_worker_first": ["/api/*"]
+  },
+
+  // One tick every 2 minutes. The handler decides per source whether it is
+  // actually due, so this stays cheap and TomTom is only called inside the
+  // configured morning window.
+  "triggers": {
+    "crons": ["*/2 * * * *"]
+  },
+
+  "observability": {
+    "enabled": true
+  },
+
+  "kv_namespaces": [
+    {
+      "binding": "BOARD_KV",
+      // Replace with your own namespace id: `wrangler kv namespace create BOARD_KV`
+      "id": "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
+    }
+  ],
+
+  "vars": {
+    "TIMEZONE": "Europe/London",
+    "WEATHER_LAT": "51.5000",
+    "WEATHER_LON": "0.1000",
+    "WEATHER_LABEL": "Home",
+    "HOME_LAT": "51.5000",
+    "HOME_LON": "0.1000",
+    "WORK_LAT": "51.5100",
+    "WORK_LON": "0.1200",
+    "COMMUTE_LABEL": "Work",
+    "COMMUTE_WINDOW_START": "06:00",
+    "COMMUTE_WINDOW_END": "09:30",
+    "COMMUTE_DAYS": "1,2,3,4,5",
+    "COMMUTE_TYPICAL_MINUTES": "32",
+    "TFL_ROAD_IDS": "a12,a13,a127",
+    "TFL_LINE_MODES": "tube,dlr,elizabeth-line,overground",
+    "CRYPTO_IDS": "bitcoin,ethereum,solana",
+    "CRYPTO_VS": "gbp",
+    "BIN_PROVIDER": "manual",
+    "BIN_SCHEDULE": "[]",
+    "MOCK": "false"
+  }
+}
