@@ -84,10 +84,10 @@ Requires Node 22.12 or newer — `.node-version` pins this for Cloudflare's
 build image, which otherwise picks a default too old for Vite 8 and wrangler.
 
 Connect the repo for automatic deploys — Cloudflare dashboard → **Workers** →
-**Create** → **Import a repository**. The defaults work:
-
-- Build command: `npm run build`
-- Deploy command: `npx wrangler deploy`
+**Create** → **Import a repository**. You can leave the Build command field
+empty: `wrangler.jsonc` declares `build.command`, so wrangler runs the build
+itself before uploading. Either `npx wrangler deploy` or
+`npx wrangler versions upload` works as the deploy command.
 
 Or deploy by hand with `npm run deploy`.
 

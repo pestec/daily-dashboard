@@ -4,6 +4,15 @@
   "main": "./worker/index.ts",
   "compatibility_date": "2026-09-03",
 
+  // Wrangler runs this before it uploads. Cloudflare's git integration goes
+  // straight from `npm install` to the deploy command when the dashboard's
+  // Build command field is empty, which leaves dist/client missing and fails
+  // the upload -- so the build is declared here instead of depending on a
+  // field outside the repo.
+  "build": {
+    "command": "npm run build"
+  },
+
   "assets": {
     "binding": "ASSETS",
     // The Vite plugin overrides this in the config it generates at
