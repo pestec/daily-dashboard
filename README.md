@@ -80,6 +80,9 @@ not a credential — it is safe to commit, and Cloudflare's own templates do.
 
 ### 2. Deploy
 
+Requires Node 22.12 or newer — `.node-version` pins this for Cloudflare's
+build image, which otherwise picks a default too old for Vite 8 and wrangler.
+
 Connect the repo for automatic deploys — Cloudflare dashboard → **Workers** →
 **Create** → **Import a repository**. The defaults work:
 
