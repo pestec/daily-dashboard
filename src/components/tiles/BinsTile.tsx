@@ -1,5 +1,9 @@
 import type { BinKind, Bins, Source } from "../../../shared/types.ts";
-import { daysUntil, relativeDayLabel } from "../../lib/format.ts";
+import {
+  daysUntil,
+  relativeDayLabel,
+  relativeDayLabelShort,
+} from "../../lib/format.ts";
 import { Tile } from "../Tile.tsx";
 
 const KIND: Record<BinKind, { label: string; swatch: string }> = {
@@ -29,11 +33,12 @@ export function BinsTile({ source, now }: Props) {
           <div className="flex min-h-0 flex-1 flex-col justify-between gap-4">
             <div className="flex flex-col gap-4">
               <p
-                className={`text-headline leading-none font-semibold ${
+                className={`leading-none font-semibold text-nowrap ${
                   daysUntil(bins.next.date) <= 1 ? "text-warn" : "text-fg"
                 }`}
+                style={{ fontSize: "min(72px, 13cqw)" }}
               >
-                {relativeDayLabel(bins.next.date)}
+                {relativeDayLabelShort(bins.next.date)}
               </p>
               <ul className="flex flex-wrap gap-3">
                 {bins.next.kinds.map((kind) => (

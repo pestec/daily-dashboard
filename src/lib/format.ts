@@ -39,6 +39,16 @@ const dayMonth = new Intl.DateTimeFormat(locale, {
   timeZone: timezone,
 });
 
+/** Compact form for places where the date is set in display type and a long
+ *  weekday would wrap -- "Wednesday 9 Sept" is ~700px at 72px, wider than the
+ *  bins tile. */
+const dayMonthShort = new Intl.DateTimeFormat(locale, {
+  weekday: "short",
+  day: "numeric",
+  month: "short",
+  timeZone: timezone,
+});
+
 export const formatClockTime = (d: Date): string => clockTime.format(d);
 export const formatClockDate = (d: Date): string => clockDate.format(d);
 export const formatHour = (iso: string): string => hourOnly.format(new Date(iso));
@@ -100,4 +110,15 @@ export function relativeDayLabel(isoDate: string, now: Date = new Date()): strin
   if (delta === 0) return "Today";
   if (delta === 1) return "Tomorrow";
   return formatDayMonth(isoDate);
+}
+
+/** Same, but compact enough to set in display type without wrapping. */
+export function relativeDayLabelShort(
+  isoDate: string,
+  now: Date = new Date(),
+): string {
+  const delta = daysUntil(isoDate, now);
+  if (delta === 0) return "Today";
+  if (delta === 1) return "Tomorrow";
+  return dayMonthShort.format(new Date(isoDate));
 }

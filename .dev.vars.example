@@ -1,0 +1,9 @@
+# Local-only secrets for `npm run dev`. Copy to `.dev.vars`, which is gitignored.
+# In production set these with `npx wrangler secret put NAME` instead.
+
+# Optional. Without it the commute tile shows COMMUTE_TYPICAL_MINUTES and never
+# calls the routing API.
+TOMTOM_API_KEY=
+
+# Optional. CoinGecko's free tier works without a key, just rate limited harder.
+COINGECKO_API_KEY=

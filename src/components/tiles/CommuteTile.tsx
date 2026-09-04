@@ -11,6 +11,14 @@ const STATE: Record<
   bad: { label: "Heavy", text: "text-bad", dot: "bg-bad" },
 };
 
+/**
+ * Sized against the tile rather than the mode. The commute cell is three
+ * columns in ambient and nine in the morning, and it falls back to the typical
+ * baseline whenever no routing key is set -- so the number has to fill either
+ * shape without being told which it is in.
+ */
+const NUMBER_SIZE = "min(140px, 16cqw)";
+
 interface Props {
   source: Source<Commute> | null;
   now: number;
@@ -25,7 +33,8 @@ export function CommuteTile({ source, now }: Props) {
             <div className="flex shrink-0 flex-col gap-3">
               <p className="flex items-baseline gap-4">
                 <span
-                  className={`tnum text-display-l leading-none font-semibold ${STATE[commute.state].text}`}
+                  className={`tnum leading-none font-semibold ${STATE[commute.state].text}`}
+                  style={{ fontSize: NUMBER_SIZE }}
                 >
                   {commute.durationMinutes}
                 </span>
@@ -67,7 +76,10 @@ export function CommuteTile({ source, now }: Props) {
           // and labelled so it is never mistaken for a live reading.
           <div className="flex min-h-0 flex-1 flex-col justify-center gap-2">
             <p className="flex items-baseline gap-3">
-              <span className="tnum text-headline leading-none font-semibold text-fg-muted">
+              <span
+                className="tnum leading-none font-semibold text-fg-muted"
+                style={{ fontSize: NUMBER_SIZE }}
+              >
                 {commute.typicalMinutes}
               </span>
               <span className="text-body text-fg-muted">min typical</span>

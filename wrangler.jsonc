@@ -21,6 +21,15 @@
     "crons": ["*/2 * * * *"]
   },
 
+  // Cache for every source. Create your own and paste the id here:
+  //   npx wrangler kv namespace create BOARD_KV
+  "kv_namespaces": [
+    {
+      "binding": "BOARD_KV",
+      "id": "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
+    }
+  ],
+
   "observability": {
     "enabled": true
   },
@@ -39,12 +48,14 @@
     "COMMUTE_WINDOW_END": "09:30",
     "COMMUTE_DAYS": "1,2,3,4,5",
     "COMMUTE_TYPICAL_MINUTES": "32",
-    "TFL_ROAD_IDS": "a12,a13,a127",
+    "TFL_ROAD_IDS": "a12,a13,a406",
     "TFL_LINE_MODES": "tube,dlr,elizabeth-line,overground",
     "CRYPTO_IDS": "bitcoin,ethereum,solana",
     "CRYPTO_VS": "gbp",
     "BIN_PROVIDER": "manual",
-    "BIN_SCHEDULE": "[]",
-    "MOCK": "true"
+    // Placeholder pattern: two fortnightly rounds offset by a week. Replace
+    // "anchor" with a date you know a collection actually happened on.
+    "BIN_SCHEDULE": "[{\"kinds\":[\"general\",\"food\"],\"anchor\":\"2026-01-07\",\"intervalDays\":14},{\"kinds\":[\"recycling\",\"garden\",\"food\"],\"anchor\":\"2026-01-14\",\"intervalDays\":14}]",
+    "MOCK": "false"
   }
 }
