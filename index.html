@@ -2,7 +2,14 @@
 <html lang="en-GB">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=1920, initial-scale=1, user-scalable=no" />
+    <!--
+      Fixed layout viewport, deliberately without initial-scale. The board is
+      built at exactly 1920x1080; declaring the width alone lets the WebView
+      scale that to whatever the panel actually reports. Adding initial-scale=1
+      would pin it at 1:1 and show only part of the board on any device whose
+      viewport is not literally 1920 CSS pixels wide.
+    -->
+    <meta name="viewport" content="width=1920, user-scalable=no" />
     <meta name="color-scheme" content="dark" />
     <title>Dashboard</title>
   </head>
