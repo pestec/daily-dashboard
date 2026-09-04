@@ -1,5 +1,5 @@
 import type { BoardPayload } from "../../shared/types.ts";
-import { mockBoard } from "../mocks/board.mock.ts";
+import { mockBoard } from "../../shared/fixtures.ts";
 import { config } from "./config.ts";
 import { mockVariant } from "./params.ts";
 

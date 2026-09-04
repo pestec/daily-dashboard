@@ -1,4 +1,4 @@
-import { isMockVariant, type MockVariant } from "../mocks/board.mock.ts";
+import { isMockVariant, type MockVariant } from "../../shared/fixtures.ts";
 
 /** Read once at module load. Nothing on this screen changes the URL. */
 const params = new URLSearchParams(window.location.search);

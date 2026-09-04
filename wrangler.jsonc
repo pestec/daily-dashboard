@@ -25,14 +25,6 @@
     "enabled": true
   },
 
-  "kv_namespaces": [
-    {
-      "binding": "BOARD_KV",
-      // Replace with your own namespace id: `wrangler kv namespace create BOARD_KV`
-      "id": "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
-    }
-  ],
-
   "vars": {
     "TIMEZONE": "Europe/London",
     "WEATHER_LAT": "51.5000",
@@ -53,6 +45,6 @@
     "CRYPTO_VS": "gbp",
     "BIN_PROVIDER": "manual",
     "BIN_SCHEDULE": "[]",
-    "MOCK": "false"
+    "MOCK": "true"
   }
 }

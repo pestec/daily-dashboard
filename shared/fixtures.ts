@@ -9,8 +9,13 @@ import type {
   Weather,
   WeatherDay,
   WeatherHour,
-} from "../../shared/types.ts";
+} from "./types.ts";
 
+/**
+ * Fixtures for developing and reviewing the whole UI with no keys and no
+ * network. Lives in shared/ because the Worker serves them too when MOCK is
+ * on, so the deployed preview shows a real board before any API is wired.
+ */
 export type MockVariant = "ambient" | "morning" | "degraded";
 
 export const MOCK_VARIANTS: readonly MockVariant[] = [
