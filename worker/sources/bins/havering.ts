@@ -146,10 +146,24 @@ async function fetchCollectionsFromRenderedPage(
         .map((tr) => {
           const cells = [...tr.querySelectorAll("td")]
             .map((td) => (td.textContent ?? "").replace(/\s+/g, " ").trim());
+          const nonEmpty = cells.filter((text) => text.length > 0);
+          const merged = nonEmpty.join(" ");
+
+          const service =
+            nonEmpty.find((text) => /Domestic\s*Waste|Recycling/i.test(text)) ??
+            (/Domestic\s*Waste|Recycling/i.test(merged) ? merged : "");
+          const date =
+            nonEmpty.find((text) => {
+              const compact = text.replace(/\s+/g, " ").trim();
+              return (
+                /((?:[A-Za-z]+,\s+)?[A-Za-z]+\s+\d{1,2}(?:st|nd|rd|th)?\s+\d{4})/.test(compact) ||
+                /(\d{1,2}\/\d{1,2}\/\d{4})/.test(compact)
+              );
+            }) ?? merged;
 
           return {
-            service: cells[1] ?? "",
-            date: cells[2] ?? "",
+            service,
+            date,
           };
         })
         .filter((row) => row.service.length > 0 && row.date.length > 0),
