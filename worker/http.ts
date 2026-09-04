@@ -29,6 +29,11 @@ export async function fetchJson<T>(
     });
 
     if (!response.ok) {
+      // 429 from a shared Cloudflare egress IP is common on keyless free
+      // tiers and looks identical to a bug on screen, so say what fixes it.
+      if (response.status === 429) {
+        throw new UpstreamError(`${label} rate limited (429) - an API key would fix this`);
+      }
       throw new UpstreamError(`${label} responded ${response.status}`);
     }
     return (await response.json()) as T;

@@ -82,8 +82,21 @@ async function refreshOne(
 ): Promise<void> {
   const existing = await readEnvelope<unknown>(env.BOARD_KV, key);
   const age = envelopeAgeSeconds(existing, now);
+  const { refreshSeconds } = CADENCE[key];
 
-  if (!force && age !== null && age < CADENCE[key].refreshSeconds) return;
+  if (!force) {
+    if (age !== null && age < refreshSeconds) return;
+
+    // A source that has never succeeded has no data age to rate-limit against,
+    // so without this it would be retried on every single cron tick. That is
+    // exactly the wrong behaviour against an upstream returning 429: back off
+    // from the last failure instead.
+    if (age === null && existing?.lastErrorAt !== undefined) {
+      const sinceFailure =
+        (now.getTime() - new Date(existing.lastErrorAt).getTime()) / 1000;
+      if (sinceFailure < refreshSeconds) return;
+    }
+  }
 
   try {
     const data = await fetchSource(key, config, env, now);
