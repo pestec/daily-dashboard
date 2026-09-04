@@ -27,51 +27,81 @@ interface Props {
 export function CommuteTile({ source, now }: Props) {
   return (
     <Tile area="area-commute" label="Commute" source={source} now={now}>
-      {(commute) =>
-        commute.kind === "live" ? (
-          <div className="flex min-h-0 flex-1 items-center gap-12">
-            <div className="flex shrink-0 flex-col gap-3">
-              <p className="flex items-baseline gap-4">
-                <span
-                  className={`tnum leading-none font-semibold ${STATE[commute.state].text}`}
-                  style={{ fontSize: NUMBER_SIZE }}
-                >
-                  {commute.durationMinutes}
-                </span>
-                <span className="text-title text-fg-muted">min</span>
-              </p>
-              <p className="text-body text-fg-muted">to {commute.destination}</p>
-            </div>
+      {(commute) => {
+        if (commute.kind === "live") {
+          const arrival = new Date(now + commute.durationMinutes * 60_000);
+          const delayPct =
+            commute.freeFlowMinutes > 0
+              ? Math.round((commute.delayMinutes / commute.freeFlowMinutes) * 100)
+              : 0;
 
-            <div className="flex min-w-0 flex-col gap-4 border-l border-border/40 pl-12">
-              <p className="flex items-center gap-4">
-                <span
-                  aria-hidden="true"
-                  className={`inline-block size-5 shrink-0 rounded-full ${STATE[commute.state].dot}`}
-                />
-                <span
-                  className={`text-headline leading-none font-semibold ${STATE[commute.state].text}`}
-                >
-                  {STATE[commute.state].label}
-                </span>
-              </p>
-              <p className="text-body text-fg-muted">
-                {commute.delayMinutes > 0 ? (
-                  <>
-                    <span className="tnum">+{commute.delayMinutes} min</span> vs
-                    free-flow{" "}
-                    <span className="tnum">{commute.freeFlowMinutes}</span>
-                  </>
-                ) : (
-                  <>
-                    running free-flow (
-                    <span className="tnum">{commute.freeFlowMinutes}</span> min)
-                  </>
-                )}
-              </p>
+          return (
+            <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-8">
+              <div className="flex min-w-0 flex-col justify-between gap-5">
+                <p className="flex items-baseline gap-4">
+                  <span
+                    className={`tnum leading-none font-semibold ${STATE[commute.state].text}`}
+                    style={{ fontSize: NUMBER_SIZE }}
+                  >
+                    {commute.durationMinutes}
+                  </span>
+                  <span className="text-title text-fg-muted">min</span>
+                </p>
+
+                <div className="space-y-2">
+                  <p className="text-body text-fg-muted">to {commute.destination}</p>
+                  <p className="text-caption text-fg-muted">
+                    ETA <span className="tnum">{arrival.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hourCycle: "h23" })}</span>
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <p className="flex items-center gap-4">
+                    <span
+                      aria-hidden="true"
+                      className={`inline-block size-5 shrink-0 rounded-full ${STATE[commute.state].dot}`}
+                    />
+                    <span
+                      className={`text-headline leading-none font-semibold ${STATE[commute.state].text}`}
+                    >
+                      {STATE[commute.state].label}
+                    </span>
+                  </p>
+                  <p className="text-body text-fg-muted">
+                    {commute.delayMinutes > 0 ? (
+                      <>
+                        <span className="tnum">+{commute.delayMinutes} min</span> vs free-flow (
+                        <span className="tnum">{commute.freeFlowMinutes}</span> min)
+                      </>
+                    ) : (
+                      <>
+                        running free-flow (<span className="tnum">{commute.freeFlowMinutes}</span> min)
+                      </>
+                    )}
+                  </p>
+                </div>
+              </div>
+
+              <div className="glass-subpanel flex min-w-0 flex-col justify-center gap-4 rounded-xl px-5 py-4">
+                <p className="text-caption uppercase tracking-[0.08em] text-fg-muted">Delay load</p>
+                <p className={`tnum text-display-l leading-none font-semibold ${STATE[commute.state].text}`}>
+                  {Math.max(0, delayPct)}%
+                </p>
+                <div className="h-3 overflow-hidden rounded-full bg-surface-2/80">
+                  <div
+                    className={`h-full ${STATE[commute.state].dot}`}
+                    style={{ width: `${Math.min(100, Math.max(6, delayPct))}%` }}
+                  />
+                </div>
+                <p className="text-caption text-fg-muted">
+                  free-flow <span className="tnum">{commute.freeFlowMinutes}</span> min
+                </p>
+              </div>
             </div>
-          </div>
-        ) : (
+          );
+        }
+
+        return (
           // Outside the morning window: a typical value, no API call,
           // and labelled so it is never mistaken for a live reading.
           <div className="flex min-h-0 flex-1 flex-col justify-center gap-2">
@@ -89,8 +119,8 @@ export function CommuteTile({ source, now }: Props) {
               outside morning window
             </p>
           </div>
-        )
-      }
+        );
+      }}
     </Tile>
   );
 }

@@ -58,7 +58,7 @@ export interface Weather {
   now: WeatherNow;
   /** Next 12 hours. */
   hourly: WeatherHour[];
-  /** Next 3 days, today first. */
+  /** Next 7 days, today first. */
   daily: WeatherDay[];
 }
 
@@ -97,6 +97,8 @@ export interface DisruptionItem {
   id: string;
   name: string;
   kind: "line" | "road";
+  /** Official line colour when known, e.g. TfL tube line hex. */
+  color?: string;
   status: string;
   severity: DisruptionSeverity;
 }

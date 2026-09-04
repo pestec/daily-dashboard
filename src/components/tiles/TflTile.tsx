@@ -7,9 +7,9 @@ const SEVERITY: Record<DisruptionSeverity, { dot: string; text: string }> = {
   severe: { dot: "bg-bad", text: "text-bad" },
 };
 
-/** The tile is two grid rows tall. Three rows of body text is what fits
- *  without clipping; anything beyond that is rolled into the header count. */
-const MAX_ITEMS = 3;
+/** The tile is two grid rows tall; compact rows let it show the top six
+ *  disruptions before collapsing the remainder into the header count. */
+const MAX_ITEMS = 6;
 
 interface Props {
   source: Source<Tfl> | null;
@@ -48,19 +48,27 @@ export function TflTile({ source, now }: Props) {
             </p>
           </div>
         ) : (
-          <ul className="flex min-h-0 flex-1 flex-col justify-center gap-3">
+          <ul className="flex min-h-0 flex-1 flex-col justify-center gap-2">
             {tfl.items.slice(0, MAX_ITEMS).map((item) => (
               <li
                 key={`${item.kind}-${item.id}`}
-                className="flex items-center gap-4"
+                className="glass-subpanel flex items-center gap-3 rounded-lg px-3 py-2"
               >
+                {item.kind === "line" && item.color !== undefined ? (
+                  <span
+                    aria-hidden="true"
+                    className="size-4 shrink-0 rounded-full border border-white/35"
+                    style={{ backgroundColor: item.color }}
+                  />
+                ) : (
+                  <span
+                    aria-hidden="true"
+                    className={`size-4 shrink-0 rounded-full ${SEVERITY[item.severity].dot}`}
+                  />
+                )}
+                <span className="shrink-0 text-caption font-semibold">{item.name}</span>
                 <span
-                  aria-hidden="true"
-                  className={`size-4 shrink-0 rounded-full ${SEVERITY[item.severity].dot}`}
-                />
-                <span className="shrink-0 text-body font-medium">{item.name}</span>
-                <span
-                  className={`truncate text-body ${SEVERITY[item.severity].text}`}
+                  className={`truncate text-caption ${SEVERITY[item.severity].text}`}
                 >
                   {item.status}
                 </span>

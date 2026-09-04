@@ -52,6 +52,11 @@ function list(raw: string | undefined): string[] {
     .filter((entry) => entry.length > 0);
 }
 
+function listOrDefault(raw: string | undefined, fallback: string[]): string[] {
+  const values = list(raw);
+  return values.length > 0 ? values : fallback;
+}
+
 const VALID_BIN_KINDS: readonly string[] = ["general", "recycling", "garden", "food"];
 
 /** Bad JSON in a var must not take the whole board down, so this degrades to
@@ -117,8 +122,8 @@ export function readConfig(env: Env): Config {
       days: list(env.COMMUTE_DAYS).map(Number).filter(Number.isInteger),
     },
     tfl: {
-      roadIds: list(env.TFL_ROAD_IDS),
-      lineModes: list(env.TFL_LINE_MODES),
+      roadIds: listOrDefault(env.TFL_ROAD_IDS, ["a12", "a13", "a406", "m25"]),
+      lineModes: listOrDefault(env.TFL_LINE_MODES, ["tube"]),
     },
     crypto: {
       ids: list(env.CRYPTO_IDS),

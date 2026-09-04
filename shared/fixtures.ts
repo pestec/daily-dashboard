@@ -101,6 +101,10 @@ const DAILY: ReadonlyArray<Omit<WeatherDay, "date">> = [
   { minC: 8, maxC: 14, code: 61, precipitationProbabilityPct: 70 },
   { minC: 7, maxC: 13, code: 3, precipitationProbabilityPct: 25 },
   { minC: 9, maxC: 16, code: 1, precipitationProbabilityPct: 5 },
+  { minC: 10, maxC: 18, code: 2, precipitationProbabilityPct: 15 },
+  { minC: 11, maxC: 19, code: 3, precipitationProbabilityPct: 35 },
+  { minC: 9, maxC: 17, code: 51, precipitationProbabilityPct: 45 },
+  { minC: 8, maxC: 15, code: 1, precipitationProbabilityPct: 10 },
 ];
 
 const weather: Weather = {
@@ -133,6 +137,7 @@ const tfl: Tfl = {
       id: "central",
       name: "Central",
       kind: "line",
+      color: "#E32017",
       status: "Severe Delays",
       severity: "severe",
     },
@@ -140,6 +145,7 @@ const tfl: Tfl = {
       id: "district",
       name: "District",
       kind: "line",
+      color: "#00782A",
       status: "Minor Delays",
       severity: "minor",
     },

@@ -170,9 +170,9 @@ at a quiet hour the page reloads itself.
 
 | Tile | Source | Key | Refresh | Notes |
 | --- | --- | --- | --- | --- |
-| Weather | Open-Meteo | none | 15 min | Current, next 12 hours, next 3 days |
+| Weather | Open-Meteo | none | 15 min | Current, next 12 hours, next 7 days |
 | Commute | Google Routes API | optional | 5 min | Morning and afternoon windows, one direction at a time |
-| Disruption | TfL Unified API | none | 5 min | Line status plus road corridors |
+| Disruption | TfL Unified API | none | 5 min | Main tube lines + A12/A13/A406/M25 corridors |
 | Bins | Havering collection-day portal (rendered) | none | ~3.5 days | Browser-rendered scrape, then falls back to manual schedule |
 | Crypto | CoinGecko | optional | 5 min | |
 

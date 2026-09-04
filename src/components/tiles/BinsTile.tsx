@@ -30,34 +30,34 @@ export function BinsTile({ source, now }: Props) {
             </p>
           </div>
         ) : (
-          <div className="flex min-h-0 flex-1 flex-col justify-between gap-4">
-            <div className="flex flex-col gap-4">
+          <div className="flex min-h-0 flex-1 flex-col justify-between gap-3">
+            <div className="flex flex-col gap-3">
               <p
                 className={`leading-none font-semibold text-nowrap ${
                   daysUntil(bins.next.date) <= 1 ? "text-warn" : "text-fg"
                 }`}
-                style={{ fontSize: "min(72px, 13cqw)" }}
+                style={{ fontSize: "min(54px, 10cqw)" }}
               >
                 {relativeDayLabelShort(bins.next.date)}
               </p>
-              <ul className="flex flex-wrap gap-3">
+              <ul className="flex flex-wrap gap-2">
                 {bins.next.kinds.map((kind) => (
                   <li
                     key={kind}
-                    className="glass-subpanel flex items-center gap-3 rounded-lg px-4 py-2"
+                    className="glass-subpanel flex items-center gap-2 rounded-lg px-3 py-1.5"
                   >
                     <span
                       aria-hidden="true"
-                      className={`size-4 rounded-sm ${KIND[kind].swatch}`}
+                      className={`size-3 rounded-sm ${KIND[kind].swatch}`}
                     />
-                    <span className="text-caption">{KIND[kind].label}</span>
+                    <span className="text-[18px] text-fg-muted">{KIND[kind].label}</span>
                   </li>
                 ))}
               </ul>
             </div>
 
             {bins.following !== null && (
-              <p className="text-caption text-fg-muted">
+              <p className="text-[18px] text-fg-muted">
                 Then {relativeDayLabel(bins.following.date)} ·{" "}
                 {bins.following.kinds.map((k) => KIND[k].label).join(", ")}
               </p>

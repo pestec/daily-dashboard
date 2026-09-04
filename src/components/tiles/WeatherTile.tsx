@@ -2,7 +2,7 @@ import type { BoardMode, Source, Weather } from "../../../shared/types.ts";
 import {
   formatHour,
   formatTemp,
-  relativeDayLabel,
+  relativeDayLabelShort,
 } from "../../lib/format.ts";
 import { describeCode } from "../../lib/weatherCodes.ts";
 import { Tile } from "../Tile.tsx";
@@ -15,33 +15,30 @@ interface Props {
 }
 
 export function WeatherTile({ source, now, mode }: Props) {
-  // Morning turns this into a wide, short band so the commute can dominate.
-  // The 3-day forecast is dropped there on purpose: at 07:30 what matters is
-  // the next few hours, and keeping it would clip the tile.
   const wide = mode === "morning";
 
   return (
     <Tile area="area-weather" label="Weather" source={source} now={now}>
       {(weather) => (
         <div
-          className={`flex min-h-0 flex-1 gap-8 ${wide ? "flex-row" : "flex-col"}`}
+          className={`flex min-h-0 flex-1 gap-6 ${wide ? "flex-col" : "flex-row"}`}
         >
-          <div className={wide ? "flex shrink-0 items-center gap-6" : "flex min-h-0 flex-1 gap-8"}>
-            <div className="flex shrink-0 items-center gap-6">
+          <div className={wide ? "grid grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] gap-6" : "flex min-h-0 flex-1 gap-6"}>
+            <div className="flex shrink-0 items-center gap-5">
               <WeatherIcon
                 code={weather.now.code}
                 isDay={weather.now.isDay}
-                size={wide ? 120 : 190}
+                size={wide ? 92 : 150}
                 className="shrink-0 text-fg"
               />
               <div className="flex flex-col gap-2">
                 <p
                   className="tnum leading-none font-semibold"
-                  style={{ fontSize: wide ? "120px" : "180px" }}
+                  style={{ fontSize: wide ? "112px" : "150px" }}
                 >
                   {formatTemp(weather.now.temperatureC)}
                 </p>
-                <p className="text-body text-fg-muted">
+                <p className={wide ? "text-caption text-fg-muted" : "text-body text-fg-muted"}>
                   {describeCode(weather.now.code)} · feels{" "}
                   <span className="tnum">{formatTemp(weather.now.apparentC)}</span>
                 </p>
@@ -53,41 +50,45 @@ export function WeatherTile({ source, now, mode }: Props) {
               </div>
             </div>
 
-            {/* Next 3 days, alongside the current conditions rather than
-                stacked under them -- otherwise the tall layout leaves a band
-                of dead space across the middle. */}
-            {!wide && (
-              <ul className="flex min-w-0 flex-1 flex-col justify-center gap-3">
-                {weather.daily.map((day) => (
-                  <li
-                    key={day.date}
-                    className="glass-subpanel flex items-center gap-5 rounded-xl px-6 py-4"
-                  >
-                    <WeatherIcon
-                      code={day.code}
-                      isDay
-                      size={52}
-                      className="shrink-0 text-fg-muted"
-                    />
-                    <span className="min-w-0 flex-1 truncate text-body text-fg-muted">
-                      {relativeDayLabel(day.date)}
-                    </span>
-                    <span className="tnum shrink-0 text-body font-medium">
-                      {formatTemp(day.maxC)}{" "}
-                      <span className="text-fg-muted">{formatTemp(day.minC)}</span>
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
+            <ul
+              className={
+                wide
+                  ? "grid min-w-0 grid-cols-7 gap-2"
+                  : "grid min-w-0 flex-1 grid-cols-1 gap-2"
+              }
+            >
+              {weather.daily.slice(0, 7).map((day) => (
+                <li
+                  key={day.date}
+                  className={`glass-subpanel flex rounded-lg ${
+                    wide
+                      ? "min-w-0 flex-col items-center gap-1 px-2 py-2"
+                      : "items-center gap-4 px-4 py-2"
+                  }`}
+                >
+                  <span className={`text-fg-muted ${wide ? "text-[18px]" : "text-caption"}`}>
+                    {relativeDayLabelShort(day.date)}
+                  </span>
+                  <WeatherIcon
+                    code={day.code}
+                    isDay
+                    size={wide ? 22 : 34}
+                    className="text-fg-muted"
+                  />
+                  <span className={`tnum font-medium ${wide ? "text-[18px]" : "text-caption"}`}>
+                    {formatTemp(day.maxC)} <span className="text-fg-muted">{formatTemp(day.minC)}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
           </div>
 
           {/* Next 12 hours */}
           <ul
             className={`flex items-end justify-between gap-2 ${
               wide
-                ? "min-w-0 flex-1 border-l border-border/40 pl-8"
-                : "shrink-0 border-t border-border/40 pt-6"
+                ? "min-w-0 border-t border-border/40 pt-4"
+                : "min-w-0 shrink-0 border-l border-border/40 pl-5"
             }`}
           >
             {weather.hourly.map((hour) => (

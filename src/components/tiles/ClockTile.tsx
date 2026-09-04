@@ -15,15 +15,15 @@ interface Props {
  */
 export function ClockTile({ now }: Props) {
   return (
-    <section className="area-clock glass-panel @container flex min-h-0 min-w-0 flex-col justify-center gap-4 overflow-hidden rounded-2xl p-8">
+    <section className="area-clock glass-panel @container flex min-h-0 min-w-0 flex-col justify-center gap-6 overflow-hidden rounded-2xl p-10">
       <time
         className="tnum leading-none font-semibold"
-        style={{ fontSize: "min(180px, 30cqw)" }}
+        style={{ fontSize: "min(230px, 36cqw)" }}
         dateTime={now.toISOString()}
       >
         {formatClockTime(now)}
       </time>
-      <p className="text-title leading-none text-fg-muted">
+      <p className="text-headline leading-none text-fg-muted">
         {formatClockDate(now)}
       </p>
     </section>
