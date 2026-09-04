@@ -1,4 +1,4 @@
-import { mockBoard } from "../shared/fixtures.ts";
+import { isMockVariant, mockBoard } from "../shared/fixtures.ts";
 import type { Env } from "./env.ts";
 
 const JSON_HEADERS = {
@@ -16,7 +16,9 @@ export default {
       // fixtures the client uses, so a deployed preview shows a real board
       // rather than six tiles stuck on "Loading".
       if (env.MOCK === "true") {
-        return Response.json(mockBoard("ambient"), { headers: JSON_HEADERS });
+        const requested = url.searchParams.get("mock");
+        const variant = isMockVariant(requested) ? requested : "ambient";
+        return Response.json(mockBoard(variant), { headers: JSON_HEADERS });
       }
       return Response.json(
         { error: "No sources configured" },

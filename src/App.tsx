@@ -1,15 +1,17 @@
 import { useEffect, type CSSProperties } from "react";
 import { Board } from "./components/Board.tsx";
+import { DebugOverlay } from "./components/DebugOverlay.tsx";
 import { useBoard } from "./hooks/useBoard.ts";
 import { useBurnInShift } from "./hooks/useBurnInShift.ts";
 import { useClock } from "./hooks/useClock.ts";
 import { useDailyReload } from "./hooks/useDailyReload.ts";
 import { useNightDim } from "./hooks/useNightDim.ts";
-import { modeOverride } from "./lib/params.ts";
+import { debugEnabled, modeOverride } from "./lib/params.ts";
 
 export function App() {
   const now = useClock();
-  const { payload } = useBoard();
+  const board = useBoard();
+  const { payload } = board;
   const burnIn = useBurnInShift();
   const night = useNightDim(now);
 
@@ -37,6 +39,15 @@ export function App() {
       }
     >
       <Board payload={payload} mode={mode} now={now} />
+      {debugEnabled && (
+        <DebugOverlay
+          board={board}
+          mode={mode}
+          night={night}
+          burnIn={burnIn}
+          now={now.getTime()}
+        />
+      )}
     </div>
   );
 }

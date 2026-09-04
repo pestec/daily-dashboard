@@ -1,7 +1,7 @@
 import type { BoardPayload } from "../../shared/types.ts";
 import { mockBoard } from "../../shared/fixtures.ts";
 import { config } from "./config.ts";
-import { mockVariant } from "./params.ts";
+import { mockVariant, mockVariantRequested } from "./params.ts";
 
 export interface FetchResult {
   payload: BoardPayload;
@@ -19,7 +19,13 @@ export async function fetchBoard(signal: AbortSignal): Promise<FetchResult> {
     return { payload: mockBoard(mockVariant), durationMs: performance.now() - started };
   }
 
-  const response = await fetch("/api/board", { signal, cache: "no-store" });
+  // Forwarded so a deployed preview can be put into its failure states from
+  // the URL, without a local build and without touching mock mode.
+  const path = mockVariantRequested
+    ? `/api/board?mock=${mockVariant}`
+    : "/api/board";
+
+  const response = await fetch(path, { signal, cache: "no-store" });
   if (!response.ok) {
     throw new Error(`/api/board responded ${response.status}`);
   }

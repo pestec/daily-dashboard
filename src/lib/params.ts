@@ -12,6 +12,10 @@ export const mockVariant: MockVariant = isMockVariant(params.get("mock"))
   ? (params.get("mock") as MockVariant)
   : "ambient";
 
+/** Whether a variant was actually asked for, as opposed to defaulted. Only an
+ *  explicit request is forwarded to the Worker, so normal loads stay clean. */
+export const mockVariantRequested: boolean = isMockVariant(params.get("mock"));
+
 /** `?night=1` / `?night=0` forces the dim palette regardless of the clock,
  *  so the night look can be reviewed at any hour. */
 export const nightOverride: boolean | null = params.has("night")
