@@ -51,10 +51,17 @@ async function loadSource(
 ): Promise<Envelope<unknown> | null> {
   const cached = await readEnvelope<unknown>(env.BOARD_KV, key);
   if (cached !== null) {
-    if (
+    const shouldRetryNullDataError =
       cached.data === null &&
-      cached.lastErrorAt !== undefined &&
-      secondsSince(cached.lastErrorAt, now) >= nullDataRetryCooldownSeconds(key)
+      cached.lastError !== undefined &&
+      (
+        // Backward compatibility: older envelopes may not include `lastErrorAt`.
+        cached.lastErrorAt === undefined ||
+        secondsSince(cached.lastErrorAt, now) >= nullDataRetryCooldownSeconds(key)
+      );
+
+    if (
+      shouldRetryNullDataError
     ) {
       try {
         const data = await fetchSource(key, config, env, now);
