@@ -78,6 +78,30 @@
 }
 
 /* ---------------------------------------------------------------------------
+   Burn-in mitigation. The board sits inside a shell that creeps a few pixels
+   around a small box on a slow cycle, so no static element -- the clock most
+   of all -- occupies the same pixels for weeks. The transition is far longer
+   than the eye tracks, so the move is invisible from a sofa; the 32px board
+   padding is what absorbs the few pixels clipped at the edge.
+--------------------------------------------------------------------------- */
+.board-shell {
+  height: 100%;
+  transform: translate3d(var(--burn-x, 0px), var(--burn-y, 0px), 0);
+  transition: transform 20s linear;
+}
+
+/* Night dimming swaps tokens, so let the affected properties ease across
+   rather than snapping the whole room's light level at the stroke of the
+   hour. Scoped to the board's own subtree, not a global `*` rule. */
+.board section,
+.board section * {
+  transition:
+    color 1.5s ease,
+    background-color 1.5s ease,
+    border-color 1.5s ease;
+}
+
+/* ---------------------------------------------------------------------------
    Board grid. 12 columns x 8 rows over the full 1920x1080, and the whole
    thing swaps template between the two modes.
 --------------------------------------------------------------------------- */
