@@ -145,8 +145,7 @@ async function fetchCollectionsFromRenderedPage(
       trs
         .map((tr) => {
           const cells = [...tr.querySelectorAll("td")]
-            .map((td) => (td.textContent ?? "").replace(/\s+/g, " ").trim())
-            .filter((text) => text.length > 0);
+            .map((td) => (td.textContent ?? "").replace(/\s+/g, " ").trim());
 
           return {
             service: cells[1] ?? "",
