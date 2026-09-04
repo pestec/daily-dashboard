@@ -161,12 +161,6 @@ export const haveringProvider: BinProvider = {
 
   async fetch(_config: Config, today: string): Promise<Bins> {
     const debug = await fetchHaveringDebug(today);
-    if (debug.parsed.next === null && debug.parsed.following === null) {
-      // Parse-empty is a data-shape problem and should not silently degrade to
-      // a hard tile error when a configured fallback schedule exists.
-      throw new ProviderUnavailableError("Havering returned no parseable collections");
-    }
-
     return debug.parsed;
   },
 };

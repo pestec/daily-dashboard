@@ -20,7 +20,13 @@ export async function fetchBins(config: Config, today: string): Promise<Bins> {
 
   if (selected !== manualProvider) {
     try {
-      return await selected.fetch(config, today);
+      const result = await selected.fetch(config, today);
+      if (result.next !== null || result.following !== null) {
+        return result;
+      }
+      // Browser HTML can be JS-hydrated with no server-rendered rows.
+      // When that happens, fall back to configured recurring schedule.
+      return await manualProvider.fetch(config, today);
     } catch {
       // Fall through to the schedule that does not depend on a council site.
     }
