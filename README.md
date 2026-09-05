@@ -127,19 +127,33 @@ The Havering provider now depends on Cloudflare Browser Rendering. Keep the
 enable Browser Rendering for the Worker in Cloudflare if your account requires
 an explicit toggle.
 
-### 4. Secrets (both optional)
+### 4. Secrets
 
 ```bash
 npx wrangler secret put GOOGLE_ROUTES_API_KEY
 npx wrangler secret put COINGECKO_API_KEY
 ```
 
-Locally, copy `.dev.vars.example` to `.dev.vars` instead — it is gitignored.
+Or add them in the dashboard under **Worker → Settings → Variables and
+Secrets** → *Add* → type **Secret**. Either way they arrive as `env.<NAME>`;
+nothing in the code cares which route was used, and a secret set in the
+dashboard survives a deploy. Locally, copy `.dev.vars.example` to `.dev.vars`
+instead — it is gitignored.
 
-**The board works with no secrets at all.** Weather (Open-Meteo), disruption
-(TfL) and crypto (CoinGecko) are all keyless, and bins come from your config.
-Without `GOOGLE_ROUTES_API_KEY` the commute tile shows a labelled typical
-fallback and never calls the routing API.
+**`GOOGLE_ROUTES_API_KEY` is genuinely optional.** Without it the commute tile
+shows a labelled typical fallback and never calls the routing API.
+
+**`COINGECKO_API_KEY` is optional in theory and required in practice.**
+CoinGecko's keyless tier is limited per source IP, and a Worker egresses from
+shared Cloudflare datacenter ranges — so it returns 429 no matter how little
+this board asks for, and the crypto tile silently serves its last good value
+behind a staleness marker until you add one.
+
+Use a **Demo** key, which is free. This code sends `x-cg-demo-api-key` to
+`api.coingecko.com`, which is the Demo pairing; a paid **Pro** key wants
+`pro-api.coingecko.com` and `x-cg-pro-api-key` and will get a 400 here.
+
+Check it took with `/api/debug/crypto-live` — see below.
 
 ## How it behaves
 

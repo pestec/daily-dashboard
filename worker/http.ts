@@ -13,12 +13,15 @@ export class UpstreamError extends Error {}
  */
 export async function fetchJson<T>(
   url: string,
-  { label, timeoutMs = DEFAULT_TIMEOUT_MS, headers, method, body }: {
+  { label, timeoutMs = DEFAULT_TIMEOUT_MS, headers, method, body, rateLimitHint }: {
     label: string;
     timeoutMs?: number;
     headers?: Record<string, string>;
     method?: string;
     body?: BodyInit;
+    /** Appended to the 429 message. Lets a caller that already sends a key say
+     *  something truer than "an API key would fix this". */
+    rateLimitHint?: string;
   },
 ): Promise<T> {
   const controller = new AbortController();
@@ -36,7 +39,9 @@ export async function fetchJson<T>(
       // 429 from a shared Cloudflare egress IP is common on keyless free
       // tiers and looks identical to a bug on screen, so say what fixes it.
       if (response.status === 429) {
-        throw new UpstreamError(`${label} rate limited (429) - an API key would fix this`);
+        throw new UpstreamError(
+          `${label} rate limited (429) - ${rateLimitHint ?? "an API key would fix this"}`,
+        );
       }
       throw new UpstreamError(`${label} responded ${response.status}`);
     }

@@ -5,5 +5,9 @@
 # and never calls the routing API.
 GOOGLE_ROUTES_API_KEY=
 
-# Optional. CoinGecko's free tier works without a key, just rate limited harder.
+# Strongly recommended in production. CoinGecko's keyless tier is limited per
+# source IP, and a Worker egresses from shared Cloudflare datacenter ranges --
+# so it 429s in practice regardless of how little this board asks for.
+# Use a free *Demo* key: this code sends x-cg-demo-api-key to api.coingecko.com.
+# A paid Pro key needs a different host and header and will 400 here.
 COINGECKO_API_KEY=
