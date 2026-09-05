@@ -192,6 +192,13 @@ at a quiet hour the page reloads itself.
 the raw upstream JSON and the parsed commute payload. It is intended for
 shape-verification while setting up route fields and should not be polled.
 
+### Crypto debug endpoint
+
+`/api/debug/crypto-live` returns the coin ids and currency the Worker actually
+resolved, plus one live CoinGecko fetch that bypasses KV. Use it when the tile
+shows the wrong coins: a failed refresh keeps the last good value, so stale
+data and a broken upstream look identical on the board.
+
 ### Bins debug endpoint
 
 `/api/debug/bins-live` performs one live bins-provider fetch and returns the

@@ -17,8 +17,20 @@ interface Props {
 
 /** Sign and arrow as well as colour: red against green is not a signal on its
  *  own, and this board is read from across a room. */
-function Change({ pct, size }: { pct: number | null; size: number }) {
-  if (pct === null) {
+function Change({
+  pct,
+  size,
+}: {
+  pct: number | null | undefined;
+  size: number;
+}) {
+  // KV holds whatever JSON the Worker last wrote successfully, which may be
+  // from a version of the code that did not have this field yet. A cached
+  // envelope therefore arrives with the field *absent*, not null -- and
+  // `undefined` run through a percentage formatter renders as "NaN%" on a
+  // screen nobody is standing in front of. Checking the value is a real
+  // number covers the missing field, an explicit null, and a NaN alike.
+  if (typeof pct !== "number" || !Number.isFinite(pct)) {
     return (
       <span
         className="shrink-0 truncate text-right leading-none text-fg-muted/50"

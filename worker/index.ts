@@ -4,6 +4,7 @@ import { readConfig } from "./config.ts";
 import type { Env } from "./env.ts";
 import { refreshDue } from "./refresh.ts";
 import { fetchBinsDebug } from "./sources/bins/index.ts";
+import { fetchCrypto } from "./sources/crypto.ts";
 import { activeCommuteSlot, fetchCommuteDebug } from "./sources/commute.ts";
 import { zonedNow } from "./time.ts";
 
@@ -50,6 +51,38 @@ export default {
         console.error("bins debug failed", error);
         return Response.json(
           { error: error instanceof Error ? error.message : "Bins debug unavailable" },
+          { status: 502, headers: JSON_HEADERS },
+        );
+      }
+    }
+
+    /* The crypto tile reads a cached envelope like every other tile, so when it
+       shows the wrong coins there are two candidates and no way to tell them
+       apart from the board: the configuration the Worker actually resolved,
+       and whether CoinGecko is answering at all. A failed refresh deliberately
+       keeps the last good value, so stale data and a broken upstream look
+       identical on screen. This returns both, live, bypassing KV. */
+    if (url.pathname === "/api/debug/crypto-live") {
+      const config = readConfig(env);
+      const resolved = {
+        ids: config.crypto.ids,
+        vsCurrency: config.crypto.vsCurrency,
+        apiKeyConfigured:
+          env.COINGECKO_API_KEY !== undefined && env.COINGECKO_API_KEY !== "",
+      };
+      try {
+        const data = await fetchCrypto(config, env.COINGECKO_API_KEY);
+        return Response.json(
+          { resolved, returned: data.tickers.length, data },
+          { headers: JSON_HEADERS },
+        );
+      } catch (error) {
+        console.error("crypto debug failed", error);
+        return Response.json(
+          {
+            resolved,
+            error: error instanceof Error ? error.message : "Crypto unavailable",
+          },
           { status: 502, headers: JSON_HEADERS },
         );
       }
