@@ -27,6 +27,13 @@ export const CADENCE: Record<SourceKey, Cadence> = {
   crypto: { refreshSeconds: 300, ttlSeconds: 1_200 },
 };
 
+/**
+ * Never retry a failed source more often than this, whatever its cadence says.
+ * Five minutes is the shortest cadence any source has, so this only ever slows
+ * a retry down -- it cannot make one more frequent than intended.
+ */
+const FAILURE_RETRY_SECONDS = 300;
+
 /** Fetches one source's data. Throws on failure; the caller decides what that
  *  means for what is already cached. */
 export async function fetchSource(
@@ -97,14 +104,23 @@ async function refreshOne(
   if (!force) {
     if (age !== null && age < refreshSeconds) return;
 
-    // A source that has never succeeded has no data age to rate-limit against,
-    // so without this it would be retried on every single cron tick. That is
-    // exactly the wrong behaviour against an upstream returning 429: back off
-    // from the last failure instead.
-    if (age === null && existing?.lastErrorAt !== undefined) {
+    // Back off from the last failure whether or not there is stale data to
+    // fall back on.
+    //
+    // This check used to be gated on `age === null`. A source holding a cached
+    // value but with a failing upstream therefore skipped it entirely, and
+    // refetched on every cron tick *and* every board request -- and
+    // assembleBoard's overdue safety net means the TV's once-a-minute poll is
+    // a request. Against a 429 that is self-sustaining: the retries are what
+    // keep the rate limit tripped, so the source can never recover on its own.
+    //
+    // Bounded by FAILURE_RETRY_SECONDS as well as the cadence, so a long-cycle
+    // source like bins still recovers in minutes rather than sulking for its
+    // full 3.5 days after one bad fetch.
+    if (existing?.lastErrorAt !== undefined) {
       const sinceFailure =
         (now.getTime() - new Date(existing.lastErrorAt).getTime()) / 1000;
-      if (sinceFailure < refreshSeconds) return;
+      if (sinceFailure < Math.min(refreshSeconds, FAILURE_RETRY_SECONDS)) return;
     }
   }
 
