@@ -4,6 +4,8 @@ import type {
   Bins,
   Crypto,
   Commute,
+  DisruptionItem,
+  DisruptionSeverity,
   Source,
   Tfl,
   Weather,
@@ -131,30 +133,69 @@ const commuteLive: Commute = {
   state: "bad",
 };
 
-const tfl: Tfl = {
-  items: [
-    {
-      id: "central",
-      name: "Central",
-      kind: "line",
-      color: "#E32017",
-      status: "Severe Delays",
-      severity: "severe",
-    },
-    {
-      id: "district",
-      name: "District",
-      kind: "line",
-      color: "#00782A",
-      status: "Minor Delays",
-      severity: "minor",
-    },
-    { id: "a12", name: "A12", kind: "road", status: "Slow", severity: "minor" },
-  ],
-  goodCount: 11,
-};
+/* The tile shows the whole monitored network at once, so the fixture has to be
+   the whole network too -- eleven tube lines and four roads, in the same fixed
+   order the Worker emits. A three-item fixture would have hidden the fact that
+   fifteen rows need to fit. */
+const TUBE: ReadonlyArray<[id: string, name: string, color: string]> = [
+  ["bakerloo", "Bakerloo", "#B36305"],
+  ["central", "Central", "#E32017"],
+  ["circle", "Circle", "#FFD300"],
+  ["district", "District", "#00782A"],
+  ["hammersmith-city", "Hammersmith & City", "#F3A9BB"],
+  ["jubilee", "Jubilee", "#A0A5A9"],
+  ["metropolitan", "Metropolitan", "#9B0056"],
+  ["northern", "Northern", "#000000"],
+  ["piccadilly", "Piccadilly", "#003688"],
+  ["victoria", "Victoria", "#0098D4"],
+  ["waterloo-city", "Waterloo & City", "#95CDBA"],
+];
 
-const tflAllClear: Tfl = { items: [], goodCount: 14 };
+const ROADS: ReadonlyArray<string> = ["A12", "A13", "A406", "M25"];
+
+function network(
+  disrupted: ReadonlyMap<string, [status: string, severity: DisruptionSeverity]>,
+): Tfl {
+  const items: DisruptionItem[] = [
+    ...TUBE.map(([id, name, color]) => {
+      const hit = disrupted.get(id);
+      return {
+        id,
+        name,
+        color,
+        kind: "line" as const,
+        status: hit?.[0] ?? "Good Service",
+        severity: hit?.[1] ?? ("good" as const),
+      };
+    }),
+    ...ROADS.map((name) => {
+      const hit = disrupted.get(name.toLowerCase());
+      return {
+        id: name.toLowerCase(),
+        name,
+        kind: "road" as const,
+        status: hit?.[0] ?? "No Exceptional Delays",
+        severity: hit?.[1] ?? ("good" as const),
+      };
+    }),
+  ];
+  return {
+    items,
+    goodCount: items.filter((item) => item.severity === "good").length,
+  };
+}
+
+const tfl: Tfl = network(
+  new Map<string, [string, DisruptionSeverity]>([
+    ["central", ["Severe Delays", "severe"]],
+    ["district", ["Minor Delays", "minor"]],
+    ["waterloo-city", ["Part Closure", "severe"]],
+    ["a12", ["Serious", "severe"]],
+    ["a406", ["Minimal", "minor"]],
+  ]),
+);
+
+const tflAllClear: Tfl = network(new Map());
 
 const bins: Bins = {
   provider: "manual",
@@ -162,12 +203,22 @@ const bins: Bins = {
   following: { date: isoDate(8), kinds: ["recycling", "garden", "food"] },
 };
 
+/* Ten tickers, spanning six-figure prices down to sub-dollar ones, so the
+   column widths get exercised by the fixture rather than only in production. */
 const crypto: Crypto = {
-  vsCurrency: "gbp",
+  vsCurrency: "usd",
   tickers: [
-    { id: "bitcoin", symbol: "BTC", price: 71432.18, change24hPct: 2.41 },
-    { id: "ethereum", symbol: "ETH", price: 2874.6, change24hPct: -1.08 },
-    { id: "solana", symbol: "SOL", price: 138.92, change24hPct: 5.73 },
+    { id: "ethereum", symbol: "ETH", price: 3128.44, change24hPct: -1.08, change7dPct: 4.62 },
+    { id: "bitcoin", symbol: "BTC", price: 104_318.72, change24hPct: 2.41, change7dPct: -3.15 },
+    { id: "uniswap", symbol: "UNI", price: 9.87, change24hPct: 0.94, change7dPct: 12.408 },
+    { id: "chainlink", symbol: "LINK", price: 17.62, change24hPct: -2.73, change7dPct: 1.09 },
+    { id: "arbitrum", symbol: "ARB", price: 0.4312, change24hPct: 3.18, change7dPct: -8.44 },
+    { id: "1inch", symbol: "1INCH", price: 0.2874, change24hPct: -0.42, change7dPct: 0 },
+    { id: "sei-network", symbol: "SEI", price: 0.3391, change24hPct: 6.05, change7dPct: 21.73 },
+    { id: "render-token", symbol: "RENDER", price: 4.128, change24hPct: -4.16, change7dPct: -11.28 },
+    { id: "solana", symbol: "SOL", price: 187.35, change24hPct: 5.73, change7dPct: 9.01 },
+    // Null rather than 0: the provider genuinely omits this for some coins.
+    { id: "ondo-finance", symbol: "ONDO", price: 0.9142, change24hPct: 1.27, change7dPct: null },
   ],
 };
 

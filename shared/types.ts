@@ -139,6 +139,10 @@ export interface CryptoTicker {
   symbol: string;
   price: number;
   change24hPct: number;
+  /** Rolling seven-day change. Null when the provider did not return one --
+   *  a newly listed coin has no week of history to compare against, and a
+   *  zero there would read as "flat" rather than "not known". */
+  change7dPct: number | null;
 }
 
 export interface Crypto {

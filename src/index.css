@@ -182,33 +182,44 @@
   }
 }
 
-.board[data-mode="ambient"] {
+/* One template, not one per mode.
+ *
+ * Three tiles are on screen at a time. Weather (which now carries the clock)
+ * holds the top-left block in both modes, so the thing glanced at most never
+ * moves. `focus` below it is whichever of commute or disruption is relevant:
+ * during a commute window the commute tile has it, and outside one the
+ * disruption board does. They are never both up, so neither has to be
+ * squeezed to make room for the other.
+ *
+ * Crypto owns the right-hand column. Bins is the only tile that comes and
+ * goes -- it appears the day before a collection and takes the bottom of that
+ * column, which is the one thing `data-bins` changes.
+ */
+.board {
   grid-template-areas:
-    "weather weather weather weather weather weather weather weather clock   clock   clock   clock"
-    "weather weather weather weather weather weather weather weather clock   clock   clock   clock"
-    "weather weather weather weather weather weather weather weather clock   clock   clock   clock"
-    "weather weather weather weather weather weather weather weather clock   clock   clock   clock"
-    "weather weather weather weather weather weather weather weather bins    bins    bins    bins"
-    "weather weather weather weather weather weather weather weather bins    bins    bins    bins"
-    "tfl     tfl     tfl     tfl     tfl     tfl     tfl     tfl     crypto  crypto  crypto  crypto"
-    "tfl     tfl     tfl     tfl     tfl     tfl     tfl     tfl     crypto  crypto  crypto  crypto";
+    "weather weather weather weather weather weather weather weather crypto crypto crypto crypto"
+    "weather weather weather weather weather weather weather weather crypto crypto crypto crypto"
+    "weather weather weather weather weather weather weather weather crypto crypto crypto crypto"
+    "weather weather weather weather weather weather weather weather crypto crypto crypto crypto"
+    "weather weather weather weather weather weather weather weather crypto crypto crypto crypto"
+    "focus   focus   focus   focus   focus   focus   focus   focus   crypto crypto crypto crypto"
+    "focus   focus   focus   focus   focus   focus   focus   focus   crypto crypto crypto crypto"
+    "focus   focus   focus   focus   focus   focus   focus   focus   crypto crypto crypto crypto";
 }
 
-.board[data-mode="morning"] {
+.board[data-bins="true"] {
   grid-template-areas:
-    "clock   clock   clock   clock   commute commute commute commute commute commute commute commute"
-    "clock   clock   clock   clock   commute commute commute commute commute commute commute commute"
-    "clock   clock   clock   clock   commute commute commute commute commute commute commute commute"
-    "weather weather weather weather weather weather weather weather bins    bins    bins    bins"
-    "weather weather weather weather weather weather weather weather bins    bins    bins    bins"
-    "weather weather weather weather weather weather weather weather bins    bins    bins    bins"
-    "tfl     tfl     tfl     tfl     tfl     tfl     tfl     crypto  crypto  crypto  crypto  crypto"
-    "tfl     tfl     tfl     tfl     tfl     tfl     tfl     crypto  crypto  crypto  crypto  crypto";
+    "weather weather weather weather weather weather weather weather crypto crypto crypto crypto"
+    "weather weather weather weather weather weather weather weather crypto crypto crypto crypto"
+    "weather weather weather weather weather weather weather weather crypto crypto crypto crypto"
+    "weather weather weather weather weather weather weather weather crypto crypto crypto crypto"
+    "weather weather weather weather weather weather weather weather crypto crypto crypto crypto"
+    "focus   focus   focus   focus   focus   focus   focus   focus   crypto crypto crypto crypto"
+    "focus   focus   focus   focus   focus   focus   focus   focus   bins   bins   bins   bins"
+    "focus   focus   focus   focus   focus   focus   focus   focus   bins   bins   bins   bins";
 }
 
 .area-weather { grid-area: weather; }
-.area-clock   { grid-area: clock; }
+.area-focus   { grid-area: focus; }
 .area-bins    { grid-area: bins; }
-.area-commute { grid-area: commute; }
-.area-tfl     { grid-area: tfl; }
 .area-crypto  { grid-area: crypto; }

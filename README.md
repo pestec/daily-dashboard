@@ -1,7 +1,7 @@
 # Daily Dashboard
 
-An always-on information board for a TV. Weather, morning commute, transport
-disruption, bin collections, crypto, and a clock — on one fixed 1920×1080
+An always-on information board for a TV. Clock and weather, morning commute,
+transport disruption, bin collections and crypto — on one fixed 1920×1080
 screen with no scrolling and nothing to interact with.
 
 Built to run for weeks unattended in a living room: dark palette, per-tile
@@ -143,12 +143,22 @@ fallback and never calls the routing API.
 
 ## How it behaves
 
+**Three tiles at a time, sometimes four.** Weather — which carries the clock —
+holds the top-left block permanently, so the two things glanced at most never
+move. Crypto owns the right-hand column. The block below weather belongs to
+whichever of commute or disruption is relevant, and they are never both up.
+
 **The board changes with the time of day.** On configured weekdays, commute is
 active in two windows: 05:30-09:00 (Home -> Work) and 15:00-19:00
-(Work -> Home). During those windows it switches to the commute layout with one
-large live journey at a time. Outside those windows the commute tile is hidden
-entirely. The Worker decides which, so the layout does not depend on the TV's
-clock.
+(Work -> Home). Inside a window the only question is how long the drive is, so
+the commute tile takes the slot; outside one it is whether the network is
+broken, so the disruption board does. The Worker decides which, so the layout
+does not depend on the TV's clock.
+
+**Bins only shows up when it matters.** The tile appears on the eve of a
+collection and is absent every other day — a panel that spends six days a week
+saying "not yet" is six days of clutter for one day of use. It takes the bottom
+of the crypto column when it does appear.
 
 **Each tile fails on its own.** Every source carries its own status, timestamp
 and TTL. A dead source greys one tile; a stale one keeps showing its last good
@@ -170,11 +180,11 @@ at a quiet hour the page reloads itself.
 
 | Tile | Source | Key | Refresh | Notes |
 | --- | --- | --- | --- | --- |
-| Weather | Open-Meteo | none | 15 min | Current, next 12 hours, next 7 days |
+| Weather + clock | Open-Meteo | none | 15 min | Current, next 12 hours, next 7 days |
 | Commute | Google Routes API | optional | 5 min | Morning and afternoon windows, one direction at a time |
-| Disruption | TfL Unified API | none | 5 min | Main tube lines + A12/A13/A406/M25 corridors |
-| Bins | Havering collection-day portal (rendered) | none | ~3.5 days | Browser-rendered scrape, then falls back to manual schedule |
-| Crypto | CoinGecko | optional | 5 min | |
+| Disruption | TfL Unified API | none | 5 min | All 11 tube lines + A12/A13/A406/M25, shown outside commute windows |
+| Bins | Havering collection-day portal (rendered) | none | ~3.5 days | Only on the eve of a collection; scrape, then manual-schedule fallback |
+| Crypto | CoinGecko | optional | 5 min | 10 tickers in USD, with 24h and 7d change |
 
 ### Commute debug endpoint
 

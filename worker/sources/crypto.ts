@@ -9,6 +9,9 @@ interface CoinGeckoMarket {
   symbol?: string;
   current_price?: number;
   price_change_percentage_24h?: number;
+  /** Only returned when the window is named in `price_change_percentage`, and
+   *  suffixed with the vs_currency rather than being a plain percentage. */
+  price_change_percentage_7d_in_currency?: number;
 }
 
 export async function fetchCrypto(
@@ -24,7 +27,7 @@ export async function fetchCrypto(
     "https://api.coingecko.com/api/v3/coins/markets" +
     `?vs_currency=${encodeURIComponent(vsCurrency)}` +
     `&ids=${ids.map(encodeURIComponent).join(",")}` +
-    "&price_change_percentage=24h&sparkline=false";
+    "&price_change_percentage=24h,7d&sparkline=false";
 
   const body = await fetchJson<CoinGeckoMarket[]>(url, {
     label: "CoinGecko",
@@ -58,6 +61,7 @@ export async function fetchCrypto(
         symbol: (entry.symbol ?? id).toUpperCase(),
         price: entry.current_price,
         change24hPct: entry.price_change_percentage_24h ?? 0,
+        change7dPct: entry.price_change_percentage_7d_in_currency ?? null,
       },
     ];
   });

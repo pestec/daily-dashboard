@@ -12,10 +12,10 @@ const STATE: Record<
 };
 
 /**
- * Sized against the tile rather than the mode. The commute cell is three
- * columns in ambient and nine in the morning, and it falls back to a typical
- * value whenever no live route is available -- so the number has to fill either
- * shape without being told which it is in.
+ * Sized against the tile rather than hard-coded. The tile shares one slot with
+ * the disruption board and is only up inside a commute window, so the cell is
+ * a fixed eight columns -- but the number still has to hold its shape if that
+ * slot is ever re-cut.
  */
 const NUMBER_SIZE = "min(128px, 14cqw)";
 
@@ -26,7 +26,7 @@ interface Props {
 
 export function CommuteTile({ source, now }: Props) {
   return (
-    <Tile area="area-commute" label="Commute" source={source} now={now}>
+    <Tile area="area-focus" label="Commute" source={source} now={now}>
       {(commute) => {
         if (commute.kind === "live") {
           const arrival = new Date(now + commute.durationMinutes * 60_000);
@@ -105,8 +105,8 @@ export function CommuteTile({ source, now }: Props) {
         }
 
         return (
-          // Outside the morning window: a typical value, no API call,
-          // and labelled so it is never mistaken for a live reading.
+          // No live route -- either routing is not configured or the call
+          // failed. Labelled so a baseline is never mistaken for a reading.
           <div className="flex min-h-0 flex-1 flex-col justify-center gap-2">
             <p className="flex items-baseline gap-3">
               <span
@@ -119,7 +119,7 @@ export function CommuteTile({ source, now }: Props) {
             </p>
             <p className="text-body text-fg-muted">to {commute.destination}</p>
             <p className="text-caption text-fg-muted/70">
-              outside morning window
+              no live traffic — typical journey time
             </p>
           </div>
         );

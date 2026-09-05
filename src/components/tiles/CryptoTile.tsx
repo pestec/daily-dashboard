@@ -2,40 +2,105 @@ import type { Crypto, Source } from "../../../shared/types.ts";
 import { formatMoney, formatSignedPct } from "../../lib/format.ts";
 import { Tile } from "../Tile.tsx";
 
+/* Column widths are shared by the header and every row, which is the only
+   thing keeping the four columns lined up -- they are separate flex rows, not
+   one table, so nothing aligns them automatically. */
+const W = {
+  symbol: 104,
+  change: 118,
+} as const;
+
 interface Props {
   source: Source<Crypto> | null;
   now: number;
 }
 
+/** Sign and arrow as well as colour: red against green is not a signal on its
+ *  own, and this board is read from across a room. */
+function Change({ pct, size }: { pct: number | null; size: number }) {
+  if (pct === null) {
+    return (
+      <span
+        className="shrink-0 truncate text-right leading-none text-fg-muted/50"
+        style={{ fontSize: `${size}px`, width: `${W.change}px` }}
+      >
+        —
+      </span>
+    );
+  }
+
+  const up = pct >= 0;
+  return (
+    <span
+      className={`tnum shrink-0 truncate text-right leading-none font-medium ${
+        up ? "text-good" : "text-bad"
+      }`}
+      style={{ fontSize: `${size}px`, width: `${W.change}px` }}
+    >
+      <span aria-hidden="true">{up ? "▲" : "▼"}</span> {formatSignedPct(pct)}
+    </span>
+  );
+}
+
 export function CryptoTile({ source, now }: Props) {
   return (
-    <Tile area="area-crypto" label="Crypto" source={source} now={now}>
+    <Tile
+      area="area-crypto"
+      label="Crypto"
+      source={source}
+      now={now}
+      accessory={
+        source?.data == null ? null : (
+          <span className="text-caption text-fg-muted uppercase">
+            {source.data.vsCurrency}
+          </span>
+        )
+      }
+    >
       {(crypto) => (
-        <ul className="flex min-h-0 flex-1 flex-col justify-around">
-          {crypto.tickers.map((ticker) => {
-            const up = ticker.change24hPct >= 0;
-            return (
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2">
+          {/* Without this the two percentage columns are indistinguishable,
+              and a 7d figure read as a 24h one is worse than no figure. */}
+          <div className="flex shrink-0 items-center gap-2 px-3 text-[17px] leading-none tracking-[0.08em] text-fg-muted/70 uppercase">
+            <span className="shrink-0" style={{ width: `${W.symbol}px` }} />
+            <span className="min-w-0 flex-1 truncate text-right">
+              {crypto.vsCurrency}
+            </span>
+            <span
+              className="shrink-0 text-right"
+              style={{ width: `${W.change}px` }}
+            >
+              24h
+            </span>
+            <span
+              className="shrink-0 text-right"
+              style={{ width: `${W.change}px` }}
+            >
+              7d
+            </span>
+          </div>
+
+          <ul className="flex min-h-0 min-w-0 flex-1 flex-col gap-1.5">
+            {crypto.tickers.map((ticker) => (
               <li
                 key={ticker.id}
-                className="flex items-baseline justify-between gap-4"
+                className="glass-subpanel flex min-h-0 min-w-0 flex-1 items-center gap-2 rounded-lg px-3"
               >
-                <span className="text-body font-medium">{ticker.symbol}</span>
-                <span className="tnum text-body text-fg-muted">
+                <span
+                  className="shrink-0 truncate text-[26px] leading-none font-semibold"
+                  style={{ width: `${W.symbol}px` }}
+                >
+                  {ticker.symbol}
+                </span>
+                <span className="tnum min-w-0 flex-1 truncate text-right text-[24px] leading-none">
                   {formatMoney(ticker.price, crypto.vsCurrency)}
                 </span>
-                <span
-                  className={`tnum flex w-40 items-baseline justify-end gap-2 text-body font-medium ${
-                    up ? "text-good" : "text-bad"
-                  }`}
-                >
-                  {/* Arrow as well as colour: red/green alone is not a signal. */}
-                  <span aria-hidden="true">{up ? "▲" : "▼"}</span>
-                  {formatSignedPct(ticker.change24hPct)}
-                </span>
+                <Change pct={ticker.change24hPct} size={21} />
+                <Change pct={ticker.change7dPct} size={21} />
               </li>
-            );
-          })}
-        </ul>
+            ))}
+          </ul>
+        </div>
       )}
     </Tile>
   );

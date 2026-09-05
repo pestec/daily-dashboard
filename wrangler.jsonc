@@ -79,8 +79,8 @@
     "COMMUTE_DAYS": "1,2,3,4,5",
     "TFL_ROAD_IDS": "a12,a13,a406,m25",
     "TFL_LINE_MODES": "tube",
-    "CRYPTO_IDS": "bitcoin,ethereum,solana",
-    "CRYPTO_VS": "gbp",
+    "CRYPTO_IDS": "ethereum,bitcoin,uniswap,chainlink,arbitrum,1inch,sei-network,render-token,solana,ondo-finance",
+    "CRYPTO_VS": "usd",
     "BIN_PROVIDER": "havering",
     // Placeholder pattern: two fortnightly rounds offset by a week. Replace
     // "anchor" with a date you know a collection actually happened on.

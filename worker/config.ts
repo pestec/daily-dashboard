@@ -52,10 +52,34 @@ function list(raw: string | undefined): string[] {
     .filter((entry) => entry.length > 0);
 }
 
-function listOrDefault(raw: string | undefined, fallback: string[]): string[] {
+function listOrDefault(
+  raw: string | undefined,
+  fallback: readonly string[],
+): string[] {
   const values = list(raw);
-  return values.length > 0 ? values : fallback;
+  return values.length > 0 ? values : [...fallback];
 }
+
+/**
+ * CoinGecko ids, in the order they should appear on the board. These are ids,
+ * not ticker symbols: `link` is Chainlink's symbol but `chainlink` is its id,
+ * and getting that wrong silently drops the coin rather than failing loudly.
+ *
+ * An id CoinGecko does not recognise costs only itself -- the response simply
+ * has no entry for it and the strip renders the other nine.
+ */
+const DEFAULT_CRYPTO_IDS: readonly string[] = [
+  "ethereum",
+  "bitcoin",
+  "uniswap",
+  "chainlink",
+  "arbitrum",
+  "1inch",
+  "sei-network",
+  "render-token",
+  "solana",
+  "ondo-finance",
+];
 
 const VALID_BIN_KINDS: readonly string[] = ["general", "recycling", "garden", "food"];
 
@@ -126,8 +150,8 @@ export function readConfig(env: Env): Config {
       lineModes: listOrDefault(env.TFL_LINE_MODES, ["tube"]),
     },
     crypto: {
-      ids: list(env.CRYPTO_IDS),
-      vsCurrency: (env.CRYPTO_VS || "gbp").toLowerCase(),
+      ids: listOrDefault(env.CRYPTO_IDS, DEFAULT_CRYPTO_IDS),
+      vsCurrency: (env.CRYPTO_VS || "usd").toLowerCase(),
     },
     bins: {
       provider: env.BIN_PROVIDER || "havering",

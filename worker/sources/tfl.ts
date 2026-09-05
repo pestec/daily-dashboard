@@ -167,16 +167,14 @@ export async function fetchTfl(config: Config): Promise<Tfl> {
       : new Error("TfL returned nothing");
   }
 
-  const bySeverity: Record<DisruptionSeverity, number> = {
-    severe: 0,
-    minor: 1,
-    good: 2,
-  };
   const items = [...all];
-  // Show the monitored network, but keep active disruption at the top.
+  // Stable order, not severity order. The tile now shows the whole monitored
+  // network at once rather than a top-five, so this is a board someone learns
+  // the shape of -- "is the Central line red today" is a glance at a fixed
+  // position. Re-sorting it every time something breaks would destroy that,
+  // and colour already makes disruption findable.
   items.sort((a, b) => {
-    const severityDiff = bySeverity[a.severity] - bySeverity[b.severity];
-    if (severityDiff !== 0) return severityDiff;
+    if (a.kind !== b.kind) return a.kind === "line" ? -1 : 1;
     return a.name.localeCompare(b.name);
   });
 
