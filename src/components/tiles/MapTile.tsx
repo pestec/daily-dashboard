@@ -4,7 +4,7 @@ import type { MapView } from "../../../shared/types.ts";
 import { useSlowOffset } from "../../hooks/useBurnInShift.ts";
 import { isNightHour, zonedHour } from "../../hooks/useNightDim.ts";
 import { config } from "../../lib/config.ts";
-import { nightOverride } from "../../lib/params.ts";
+import { debugEnabled, nightOverride } from "../../lib/params.ts";
 import { DARK_MAP_STYLE, loadGoogleMaps } from "../../lib/googleMaps.ts";
 
 /** How long to wait before trying the script again. The board is expected to
@@ -18,6 +18,8 @@ type Status = "loading" | "ready" | "failed";
 interface Attempt {
   view: string;
   status: Exclude<Status, "loading">;
+  /** What the map settled on, for the ?debug readout. Null on failure. */
+  zoom: number | null;
 }
 
 interface Props {
@@ -107,10 +109,11 @@ export function MapTile({ view, clock }: Props) {
         // widths -- so this tile is 1229px for the life of the page and there
         // is nothing to re-measure on.
         const framed = frame(frameRef.current, westLon, eastLon);
+        const requested = framed?.zoom ?? zoom;
 
         const map = new maps.Map(host, {
           center: { lat, lng: framed?.centreLon ?? lon },
-          zoom: framed?.zoom ?? zoom,
+          zoom: requested,
           isFractionalZoomEnabled: true,
           // A cloud-styled map id and inline styles are mutually exclusive:
           // Google ignores the second and warns. Send whichever is configured.
@@ -121,12 +124,31 @@ export function MapTile({ view, clock }: Props) {
           clickableIcons: false,
           backgroundColor: "#081222",
         });
+        // A zoom derived from the limits almost always lands between two
+        // integers, and `isFractionalZoomEnabled` is a request, not a
+        // guarantee -- an older API version, or a build serving raster tiles
+        // that will not honour it, quietly floors the number instead. Flooring
+        // is the bad direction: one step down doubles the ground covered, so
+        // the tile silently shows twice the area it was told to.
+        //
+        // So check, and only correct when it actually happened. Rounding up
+        // frames slightly tighter than asked, which errs towards showing less
+        // than the limits rather than a view with no relationship to them.
+        const applied = map.getZoom();
+        if (applied !== undefined && applied < requested - 0.001) {
+          map.setZoom(Math.ceil(requested));
+        }
+
         new maps.TrafficLayer().setMap(map);
 
-        setAttempt({ view: token, status: "ready" });
+        setAttempt({
+          view: token,
+          status: "ready",
+          zoom: map.getZoom() ?? null,
+        });
       } catch {
         if (cancelled) return;
-        setAttempt({ view: token, status: "failed" });
+        setAttempt({ view: token, status: "failed", zoom: null });
         retry = window.setTimeout(() => void attach(), RETRY_MS);
       }
     };
@@ -168,6 +190,11 @@ export function MapTile({ view, clock }: Props) {
             Traffic
           </h2>
           <State view={view} asleep={asleep} status={status} />
+          {debugEnabled && status === "ready" && attempt?.zoom != null && (
+            <span className="tnum text-caption text-fg-muted/60">
+              z{attempt.zoom.toFixed(2)}
+            </span>
+          )}
         </div>
       </div>
     </section>

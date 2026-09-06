@@ -161,6 +161,15 @@ to `MAP_ZOOM` rather than half-applying, because a frame built from one limit
 is not a near-miss — it is a map of somewhere else, drawn with complete
 confidence.
 
+The derived zoom almost always lands between two integers, and Google only
+honours that on a map that supports fractional zoom. Where it does not, it
+floors the number — and one step down doubles the ground covered, so the tile
+quietly shows twice the area it was told to. The board checks what the map
+actually took and rounds up when that happened, erring towards a frame that
+is tighter than the limits rather than one with no relationship to them.
+**`?debug` prints the zoom the map settled on** next to the tile's label,
+which is the quickest way to tell a framing problem from a limits problem.
+
 > **North–south coverage is not a separate setting, and cannot be.** A map
 > covers ground in proportion to its container, so fixing the east–west
 > extent fixes the north–south extent with it, at the tile's own

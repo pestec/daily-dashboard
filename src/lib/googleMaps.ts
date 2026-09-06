@@ -13,13 +13,16 @@ export interface LatLngLiteral {
 }
 
 /**
- * An opaque handle. Deliberately has no members: the board constructs a map
- * and never calls anything on it, because every change to the view -- centre,
- * zoom, style, or the night boundary -- rebuilds it from scratch rather than
- * mutating it. Declaring setters here would be describing an API this code
- * does not use.
+ * Nearly opaque. Every change to the view -- centre, style, the night
+ * boundary -- rebuilds the map rather than mutating it, so the only reason
+ * to hold the handle is to find out what zoom the map *actually* took and,
+ * when that is not the one it was given, to insist. See MapTile.
  */
-export type GoogleMapInstance = object;
+export interface GoogleMapInstance {
+  /** Undefined before the map has settled on one. */
+  getZoom(): number | undefined;
+  setZoom(zoom: number): void;
+}
 
 interface MapOptions {
   center: LatLngLiteral;
