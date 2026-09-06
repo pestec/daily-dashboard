@@ -2,8 +2,9 @@ import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { zoomForLongitudeSpan } from "../../../shared/mapFraming.ts";
 import type { MapView } from "../../../shared/types.ts";
 import { useSlowOffset } from "../../hooks/useBurnInShift.ts";
-import { useNightDim } from "../../hooks/useNightDim.ts";
+import { isNightHour, zonedHour } from "../../hooks/useNightDim.ts";
 import { config } from "../../lib/config.ts";
+import { nightOverride } from "../../lib/params.ts";
 import { DARK_MAP_STYLE, loadGoogleMaps } from "../../lib/googleMaps.ts";
 
 /** How long to wait before trying the script again. The board is expected to
@@ -52,8 +53,7 @@ export function MapTile({ view, clock }: Props) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const [attempt, setAttempt] = useState<Attempt | null>(null);
 
-  const night = useNightDim(clock);
-  const asleep = night && config.mapHideAtNight;
+  const asleep = blanked(clock);
 
   const drift = useSlowOffset(config.mapDriftPx, config.mapDriftMinutes);
 
@@ -175,6 +175,25 @@ export function MapTile({ view, clock }: Props) {
 }
 
 /**
+ * Whether the map should be blanked rather than drawn.
+ *
+ * On its own window, not the palette's: the two are set an hour apart on
+ * purpose, and reading `useNightDim` here would silently retie them the next
+ * time either one moved. `?night=` still forces it either way, which is the
+ * only way to review the blanked state at four in the afternoon.
+ */
+function blanked(clock: Date): boolean {
+  if (nightOverride !== null) return nightOverride;
+  if (!config.mapHideAtNight) return false;
+
+  return isNightHour(
+    zonedHour(clock),
+    config.mapHideStartHour,
+    config.mapHideEndHour,
+  );
+}
+
+/**
  * Centre and zoom derived from the configured east-west limits, or null when
  * they are not set and the tile should use its own `lon` and `zoom`.
  *
@@ -220,7 +239,7 @@ function State({
   if (asleep) {
     return (
       <span className="text-caption text-fg-muted/70 tnum">
-        Resumes {String(config.nightEndHour).padStart(2, "0")}:00
+        Resumes {String(config.mapHideEndHour).padStart(2, "0")}:00
       </span>
     );
   }

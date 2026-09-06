@@ -308,9 +308,13 @@ every day — a road network never moves — which is the exact pattern a panel
 retains. Four things work against that:
 
 - It is **only up outside commute windows**, and **blanked entirely overnight**
-  between the configured night hours rather than dimmed. Not drawing it for
-  nine hours a day beats any amount of dimming, and there is no traffic to
-  report at 03:00. `VITE_MAP_HIDE_AT_NIGHT=false` keeps it on.
+  rather than dimmed — 23:00 to 07:00 by default. Not drawing it for eight
+  hours a day beats any amount of dimming, and there is no traffic to report
+  at 03:00. That window is the map's own (`VITE_MAP_HIDE_START` /
+  `VITE_MAP_HIDE_END`), deliberately not the palette's night hours: the dim
+  exists to keep the room dark, the blank to keep one road network off the
+  same pixels for years, and the map is worth another hour after the board
+  has dimmed. `VITE_MAP_HIDE_AT_NIGHT=false` keeps it on all night.
 - The map layer **drifts 16px around its own box every 7 minutes**, on top of
   the board's own 6px/10min creep. The periods differ on purpose: on the same
   period the two stay locked and add up to one bigger step instead of covering

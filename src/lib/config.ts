@@ -36,10 +36,21 @@ export const config = {
    */
   mapDriftPx: num(env.VITE_MAP_DRIFT_PX, 16),
   mapDriftMinutes: num(env.VITE_MAP_DRIFT_MINUTES, 7),
-  /** Blank the map overnight rather than dim it. Nine hours a day of not
+  /** Blank the map overnight rather than dim it. Eight hours a day of not
    *  drawing it at all is worth more than any amount of dimming, and there is
    *  no traffic to report at 03:00 anyway. */
   mapHideAtNight: bool(env.VITE_MAP_HIDE_AT_NIGHT, true),
+  /**
+   * The map's own blanking window, deliberately not the palette's.
+   *
+   * The dim exists so the room is not lit up; the blank exists so the panel
+   * is not asked to hold one road network in the same pixels for years.
+   * Different jobs, so different hours -- traffic is still worth a look for
+   * the hour after the board has dimmed, while people are still out on it.
+   * Wraps midnight exactly as the night hours do.
+   */
+  mapHideStartHour: num(env.VITE_MAP_HIDE_START, 23),
+  mapHideEndHour: num(env.VITE_MAP_HIDE_END, 7),
   timezone: env.VITE_TIMEZONE ?? "Europe/London",
   locale: env.VITE_LOCALE ?? "en-GB",
 } as const;

@@ -8,6 +8,24 @@ export function isNightHour(hour: number, start: number, end: number): boolean {
 }
 
 /**
+ * The hour in the configured zone, not the device's -- the board is not
+ * allowed to depend on the TV's clock being set correctly.
+ *
+ * Exported because the palette is no longer the only thing on a schedule:
+ * the traffic map blanks itself on a window of its own, which starts an hour
+ * later than the dim does.
+ */
+export function zonedHour(now: Date): number {
+  return Number(
+    new Intl.DateTimeFormat("en-GB", {
+      hour: "2-digit",
+      hourCycle: "h23",
+      timeZone: config.timezone,
+    }).format(now),
+  );
+}
+
+/**
  * Whether the dim palette should be active. Derived from the clock the board
  * already ticks once a minute rather than owning a timer of its own -- one
  * fewer thing to leak over a month of uptime.
@@ -15,14 +33,5 @@ export function isNightHour(hour: number, start: number, end: number): boolean {
 export function useNightDim(now: Date): boolean {
   if (nightOverride !== null) return nightOverride;
 
-  // Read the hour in the configured zone, not the device's.
-  const hour = Number(
-    new Intl.DateTimeFormat("en-GB", {
-      hour: "2-digit",
-      hourCycle: "h23",
-      timeZone: config.timezone,
-    }).format(now),
-  );
-
-  return isNightHour(hour, config.nightStartHour, config.nightEndHour);
+  return isNightHour(zonedHour(now), config.nightStartHour, config.nightEndHour);
 }
