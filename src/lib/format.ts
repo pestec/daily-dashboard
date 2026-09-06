@@ -59,14 +59,16 @@ export const formatDayMonth = (iso: string): string =>
 
 export const formatTemp = (c: number): string => `${Math.round(c)}°`;
 
-export function formatMoney(value: number, currency: string): string {
+/** Bare number, no currency symbol: the tile names the currency once in its
+ *  header, so a "US$" on every row is width spent on nothing. */
+export function formatMoney(value: number): string {
   // Crypto spans several orders of magnitude; a fixed 2dp would render either
   // noise or nothing useful depending on the coin.
-  const maximumFractionDigits = value >= 1000 ? 0 : value >= 1 ? 2 : 4;
+  const digits = value >= 1000 ? 0 : value >= 1 ? 2 : 4;
   return new Intl.NumberFormat(locale, {
-    style: "currency",
-    currency: currency.toUpperCase(),
-    maximumFractionDigits,
+    // Pinned rather than capped, so the decimal points stay in a column.
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
   }).format(value);
 }
 

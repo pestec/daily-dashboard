@@ -105,7 +105,7 @@ export function CryptoTile({ source, now }: Props) {
                   {ticker.symbol}
                 </span>
                 <span className="tnum min-w-0 flex-1 truncate text-right text-[24px] leading-none">
-                  {formatMoney(ticker.price, crypto.vsCurrency)}
+                  {formatMoney(ticker.price)}
                 </span>
                 <Change pct={ticker.change24hPct} size={21} />
                 <Change pct={ticker.change7dPct} size={21} />
