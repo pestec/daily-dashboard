@@ -241,7 +241,7 @@ at a quiet hour the page reloads itself.
 | --- | --- | --- | --- | --- |
 | Weather + clock | Open-Meteo | none | 15 min | Current, next 12 hours, next 7 days |
 | Commute | Google Routes API | optional | 5 min | Morning and afternoon windows, one direction at a time |
-| Disruption | TfL Unified API | none | 5 min | All 11 tube lines + A12/A13/A406/M25, shown outside commute windows |
+| Disruption | TfL Unified API | none | 5 min | All 11 tube lines + A12/A13/A406, shown outside commute windows. Roads are limited to TfL's own network -- no motorways |
 | Bins | Havering collection-day portal (rendered) | none | ~3.5 days | Only on the eve of a collection; scrape, then manual-schedule fallback |
 | Crypto | CoinGecko | optional | 5 min | 10 tickers in USD, with 24h and 7d change |
 

@@ -40,11 +40,15 @@ const MAIN_TUBE_LINES: ReadonlyMap<string, { name: string; color: string }> = ne
   ["waterloo-city", { name: "Waterloo & City", color: "#95CDBA" }],
 ]);
 
+// Only roads TfL actually manages (the TLRN) can appear here -- its Road
+// endpoint 404s anything else. Motorways are National Highways', not TfL's,
+// so the M25 is deliberately absent: it was in this list until it was noticed
+// that every request for it failed and the tile just showed one row fewer.
+// `api.tfl.gov.uk/Road` lists the ids that work.
 const MAIN_ROAD_ANCHORS: ReadonlyMap<string, Point> = new Map([
   ["a12", { lat: 51.5636, lon: 0.0736 }],
   ["a13", { lat: 51.5192, lon: 0.0895 }],
   ["a406", { lat: 51.5919, lon: 0.0338 }],
-  ["m25", { lat: 51.533, lon: 0.287 }],
 ]);
 
 /**
@@ -125,8 +129,10 @@ export async function fetchTfl(config: Config): Promise<Tfl> {
 
   // Roads are requested one at a time on purpose. TfL 404s the *entire*
   // request if any single id in a comma-separated list is not part of its
-  // network (a127, for instance, is Essex), which would silently drop road
-  // status altogether. One request each means an unknown id costs only itself.
+  // network (a127 is Essex, the M25 is National Highways'), which would
+  // silently drop road status altogether. One request each means an unknown id
+  // costs only itself -- and MAIN_ROAD_ANCHORS keeps such an id out entirely,
+  // so a 404 is not quietly absorbed by the allSettled below.
   const scopedRoadIds = config.tfl.roadIds
     .map(normaliseRoadId)
     .filter(

@@ -151,7 +151,7 @@ const TUBE: ReadonlyArray<[id: string, name: string, color: string]> = [
   ["waterloo-city", "Waterloo & City", "#95CDBA"],
 ];
 
-const ROADS: ReadonlyArray<string> = ["A12", "A13", "A406", "M25"];
+const ROADS: ReadonlyArray<string> = ["A12", "A13", "A406"];
 
 function network(
   disrupted: ReadonlyMap<string, [status: string, severity: DisruptionSeverity]>,

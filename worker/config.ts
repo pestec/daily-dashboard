@@ -150,7 +150,7 @@ export function readConfig(env: Env): Config {
       days: list(env.COMMUTE_DAYS).map(Number).filter(Number.isInteger),
     },
     tfl: {
-      roadIds: listOrDefault(env.TFL_ROAD_IDS, ["a12", "a13", "a406", "m25"]),
+      roadIds: listOrDefault(env.TFL_ROAD_IDS, ["a12", "a13", "a406"]),
       lineModes: listOrDefault(env.TFL_LINE_MODES, ["tube"]),
     },
     crypto: {

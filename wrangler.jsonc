@@ -76,7 +76,7 @@
     "COMMUTE_AFTERNOON_WINDOW_START": "15:00",
     "COMMUTE_AFTERNOON_WINDOW_END": "19:00",
     "COMMUTE_DAYS": "1,2,3,4,5",
-    "TFL_ROAD_IDS": "a12,a13,a406,m25",
+    "TFL_ROAD_IDS": "a12,a13,a406",
     "TFL_LINE_MODES": "tube",
     "CRYPTO_IDS": "ethereum,bitcoin,uniswap,chainlink,arbitrum,1inch,sei-network,render-token,solana,ondo-finance",
     "CRYPTO_VS": "usd",
