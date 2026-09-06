@@ -16,8 +16,16 @@ const STATE: Record<
  * the disruption board and is only up inside a commute window, so the cell is
  * a fixed eight columns -- but the number still has to hold its shape if that
  * slot is ever re-cut.
+ *
+ * The cap is a height budget, not a taste call. The focus slot is three rows of
+ * the eight-row board, which leaves the tile 248px inside its padding and
+ * header. The live layout spends 39px on the destination line, 67px on the
+ * state block and 24px on the two gaps between them, so anything above ~118px
+ * here pushes the last caption out through the shell's `overflow-hidden` and it
+ * simply vanishes -- which is what 128px was quietly doing. 104px matches the
+ * delay figure beside it and leaves a little room for a longer font metric.
  */
-const NUMBER_SIZE = "min(128px, 14cqw)";
+const NUMBER_SIZE = "min(104px, 14cqw)";
 
 interface Props {
   source: Source<Commute> | null;
@@ -48,12 +56,15 @@ export function CommuteTile({ source, now }: Props) {
                   <span className="text-title text-fg-muted">min</span>
                 </p>
 
-                <div className="space-y-1">
-                  <p className="text-body text-fg-muted">to {commute.destination}</p>
-                  <p className="text-caption text-fg-muted">
+                {/* Destination and arrival share a line. As two rows they cost
+                    74px of a 248px box, and the tile has no room to spend a
+                    whole row on three words. */}
+                <p className="flex min-w-0 items-baseline gap-4 text-body text-fg-muted">
+                  <span className="truncate">to {commute.destination}</span>
+                  <span className="shrink-0">
                     ETA <span className="tnum">{arrival.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hourCycle: "h23" })}</span>
-                  </p>
-                </div>
+                  </span>
+                </p>
 
                 <div className="space-y-1">
                   <p className="flex items-center gap-4">
