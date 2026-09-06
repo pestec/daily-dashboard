@@ -5,14 +5,18 @@ import { useSlowOffset } from "../../hooks/useBurnInShift.ts";
 import { isNightHour, zonedHour } from "../../hooks/useNightDim.ts";
 import { config } from "../../lib/config.ts";
 import { debugEnabled, nightOverride } from "../../lib/params.ts";
-import { DARK_MAP_STYLE, loadGoogleMaps } from "../../lib/googleMaps.ts";
+import {
+  DARK_MAP_STYLE,
+  loadGoogleMaps,
+  onMapsAuthFailure,
+} from "../../lib/googleMaps.ts";
 
 /** How long to wait before trying the script again. The board is expected to
  *  ride out a router reboot, so this retries for as long as the tile is up
  *  rather than giving up after a few goes. */
 const RETRY_MS = 300_000;
 
-type Status = "loading" | "ready" | "failed";
+type Status = "loading" | "ready" | "failed" | "rejected";
 
 /** The outcome of one attempt, tagged with the view it was an attempt at. */
 interface Attempt {
@@ -94,6 +98,17 @@ export function MapTile({ view, clock }: Props) {
     let cancelled = false;
     let retry: number | undefined;
 
+    // Deliberately not retried on a timer, unlike a failed script load. A
+    // refused key is not a passing condition, and every retry constructs
+    // another map -- which is the billable unit, and the very thing that is
+    // over quota if that is what went wrong. Retrying would be paying to
+    // stay broken.
+    const unsubscribe = onMapsAuthFailure(() => {
+      if (cancelled) return;
+      host.replaceChildren();
+      setAttempt({ view: token, status: "rejected", zoom: null });
+    });
+
     const attach = async (): Promise<void> => {
       try {
         const maps = await loadGoogleMaps(key);
@@ -157,6 +172,7 @@ export function MapTile({ view, clock }: Props) {
 
     return () => {
       cancelled = true;
+      unsubscribe();
       if (retry !== undefined) window.clearTimeout(retry);
       // Google fills the host with DOM of its own, which React neither owns
       // nor removes. Without this, re-running the effect on a host that is
@@ -269,6 +285,12 @@ function State({
         Resumes {String(config.mapHideEndHour).padStart(2, "0")}:00
       </span>
     );
+  }
+
+  if (status === "rejected") {
+    // Named for what it is, because all four things that cause it are fixed
+    // in the Google Cloud console rather than anywhere in this repo.
+    return <span className="text-caption text-bad">Key rejected</span>;
   }
 
   if (status === "failed") {

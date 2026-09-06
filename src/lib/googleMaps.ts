@@ -67,7 +67,35 @@ declare global {
   interface Window {
     google?: { maps?: MapsApi };
     __dashboardMapsReady?: () => void;
+    /** Google calls this by name on an authorisation failure. */
+    gm_authFailure?: () => void;
   }
+}
+
+let authFailureListener: (() => void) | null = null;
+
+/**
+ * Subscribe to Google refusing the key.
+ *
+ * This is a different failure from the script not loading, and it arrives by
+ * a different route: the script loads, the map constructs, everything looks
+ * fine, and *then* Google decides the key is not allowed -- wrong referrer,
+ * API not enabled, billing off, or the daily quota spent. What it does about
+ * it is paint a large pale panel reading "Sorry! Something went wrong" into
+ * the container, which on a wall display is both uninformative and the
+ * brightest thing in the room for however many days it takes someone to
+ * notice.
+ *
+ * `gm_authFailure` is the documented hook for taking that over. The console
+ * still carries the specific reason -- RefererNotAllowedMapError and friends
+ * -- which is the part worth reading; this only exists so the board can show
+ * its own dark failure state instead of Google's bright one.
+ */
+export function onMapsAuthFailure(listener: () => void): () => void {
+  authFailureListener = listener;
+  return () => {
+    if (authFailureListener === listener) authFailureListener = null;
+  };
 }
 
 /**
@@ -142,6 +170,12 @@ let pending: Promise<MapsApi> | null = null;
  */
 export function loadGoogleMaps(key: string): Promise<MapsApi> {
   if (pending !== null) return pending;
+
+  // Installed before the script is appended, so it is in place by the time
+  // Google runs its check. Harmless to reassign on a cached load.
+  window.gm_authFailure = () => {
+    authFailureListener?.();
+  };
 
   pending = new Promise<MapsApi>((resolve, reject) => {
     const loaded = window.google?.maps;
