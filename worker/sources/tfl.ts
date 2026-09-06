@@ -24,11 +24,6 @@ interface Point {
   lon: number;
 }
 
-const RM13_7YB: Point = {
-  lat: 51.53578437178105,
-  lon: 0.19729711541201045,
-};
-
 const ROAD_RADIUS_MILES = 20;
 
 const MAIN_TUBE_LINES: ReadonlyMap<string, { name: string; color: string }> = new Map([
@@ -95,10 +90,10 @@ function milesBetween(a: Point, b: Point): number {
   return earthRadiusMiles * c;
 }
 
-function isRoadInScope(roadId: string): boolean {
+function isRoadInScope(roadId: string, origin: Point): boolean {
   const point = MAIN_ROAD_ANCHORS.get(roadId);
   if (point === undefined) return false;
-  return milesBetween(RM13_7YB, point) <= ROAD_RADIUS_MILES;
+  return milesBetween(origin, point) <= ROAD_RADIUS_MILES;
 }
 
 export async function fetchTfl(config: Config): Promise<Tfl> {
@@ -134,7 +129,10 @@ export async function fetchTfl(config: Config): Promise<Tfl> {
   // status altogether. One request each means an unknown id costs only itself.
   const scopedRoadIds = config.tfl.roadIds
     .map(normaliseRoadId)
-    .filter((roadId) => MAIN_ROAD_ANCHORS.has(roadId) && isRoadInScope(roadId));
+    .filter(
+      (roadId) =>
+        MAIN_ROAD_ANCHORS.has(roadId) && isRoadInScope(roadId, config.commute.home),
+    );
 
   for (const roadId of scopedRoadIds) {
     requests.push(
