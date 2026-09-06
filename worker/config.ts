@@ -143,14 +143,8 @@ export function readConfig(env: Env): Config {
         lon: num(env.WORK_LON, PLACEHOLDER_WORK.lon),
       },
       workLabel: env.COMMUTE_LABEL || "Work",
-      morningStartMinutes:
-        parseHhMm(env.COMMUTE_MORNING_WINDOW_START || "") ??
-        parseHhMm(env.COMMUTE_WINDOW_START || "") ??
-        5 * 60 + 30,
-      morningEndMinutes:
-        parseHhMm(env.COMMUTE_MORNING_WINDOW_END || "") ??
-        parseHhMm(env.COMMUTE_WINDOW_END || "") ??
-        9 * 60,
+      morningStartMinutes: parseHhMm(env.COMMUTE_MORNING_WINDOW_START || "") ?? 5 * 60 + 30,
+      morningEndMinutes: parseHhMm(env.COMMUTE_MORNING_WINDOW_END || "") ?? 9 * 60,
       afternoonStartMinutes: parseHhMm(env.COMMUTE_AFTERNOON_WINDOW_START || "") ?? 15 * 60,
       afternoonEndMinutes: parseHhMm(env.COMMUTE_AFTERNOON_WINDOW_END || "") ?? 19 * 60,
       days: list(env.COMMUTE_DAYS).map(Number).filter(Number.isInteger),

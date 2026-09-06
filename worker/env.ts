@@ -26,8 +26,28 @@ interface Secrets {
   COINGECKO_API_KEY?: string;
 }
 
+/**
+ * Vars that live only in the Cloudflare dashboard, never in wrangler.jsonc.
+ *
+ * They are kept out of `vars` on purpose: `keep_vars` only stops wrangler
+ * deleting dashboard vars this repo does not name, and every key it *does*
+ * name is re-uploaded on each deploy -- so a placeholder in wrangler.jsonc
+ * would reset the real value on every push. Because nothing declares them at
+ * build time, `wrangler types` cannot see them and they are typed here as
+ * optional instead; `readConfig` treats an absent one as unset and falls back.
+ */
+interface DashboardVars {
+  WEATHER_LAT?: string;
+  WEATHER_LON?: string;
+  HOME_LAT?: string;
+  HOME_LON?: string;
+  WORK_LAT?: string;
+  WORK_LON?: string;
+  BIN_SCHEDULE?: string;
+}
+
 interface OptionalBindings {
   BROWSER?: Fetcher;
 }
 
-export type Env = Vars & Secrets & OptionalBindings;
+export type Env = Vars & DashboardVars & Secrets & OptionalBindings;

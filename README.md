@@ -127,21 +127,37 @@ Once connected, every push to a branch gets its own preview URL of the form
 
 ### 3. Set your real configuration
 
-**Keep your real coordinates out of the repo.** The values in `wrangler.jsonc`
-are placeholders. Set the real ones in the Cloudflare dashboard under
-**Worker → Settings → Variables and Secrets**, as plaintext variables:
-`WEATHER_LAT`, `WEATHER_LON`, `HOME_LAT`, `HOME_LON`, `WORK_LAT`, `WORK_LON`,
-and your own `BIN_SCHEDULE`.
+**Keep your real coordinates out of the repo.** Set them in the Cloudflare
+dashboard under **Worker → Settings → Variables and Secrets**, as plaintext
+variables: `WEATHER_LAT`, `WEATHER_LON`, `HOME_LAT`, `HOME_LON`, `WORK_LAT`,
+`WORK_LON`, and your own `BIN_SCHEDULE`. These seven are the only configuration
+`wrangler.jsonc` does not carry, and that absence is what protects them — see
+the note below before adding any of them back.
 
 `HOME_*` and `WORK_*` are load-bearing: leave one unset and the commute is
 routed between two placeholder points in central London rather than falling
 back to anything sensible. Confirm all four with `/api/debug/commute-live`
 after setting them.
 
-> This is only safe because `wrangler.jsonc` sets `keep_vars: true`. By default
-> wrangler treats its config as the source of truth and overwrites or deletes
-> dashboard-set vars on every deploy — which would silently reset your real
-> location to the placeholder on the next push. Do not remove that flag.
+> **Why these seven are missing from `wrangler.jsonc`.** `keep_vars: true` is
+> necessary but not sufficient. It stops wrangler *deleting* dashboard vars the
+> config does not mention; it does not stop it *overwriting* the ones it does.
+> Every key under `vars` is uploaded on each deploy and replaces whatever the
+> dashboard holds — so a var listed there with a placeholder is reset to that
+> placeholder on every single push, flag or no flag. The only way to leave a
+> value under the dashboard's control is to keep its key out of `vars`
+> entirely. Do not "document" a real var by adding a placeholder for it; add it
+> to [`.env.example`](.env.example) instead, which is not uploaded. The
+> fallbacks for an unset var live in [`worker/config.ts`](worker/config.ts).
+
+> **The same flag means obsolete vars are never cleaned up.** Because wrangler
+> no longer deletes what it does not mention, a variable you remove from
+> `wrangler.jsonc` — or one that was only ever set by hand — stays on the
+> deployed Worker until you delete it in the dashboard yourself. Nothing on the
+> board reads an unknown var, so a stale one is clutter rather than a hazard;
+> `grep -rho 'env\.[A-Z][A-Z0-9_]*' worker/ | sort -u` lists everything the
+> Worker actually reads, and anything outside that list plus the two secrets is
+> safe to remove.
 
 Note that a variable change only reaches the board once that source next
 refreshes, since tiles render from the cached payload — up to 15 minutes for

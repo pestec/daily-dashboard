@@ -52,39 +52,35 @@
     "enabled": true
   },
 
-  // Without this, wrangler treats this file as the source of truth and
-  // overwrites or deletes dashboard-set vars on every deploy -- so the real
-  // coordinates set in the dashboard would be reset to the placeholders below
-  // by the next push. Keeping real locations out of the repo only works if
-  // deploys stop clobbering them.
+  // Stops wrangler DELETING dashboard-set vars this file does not mention.
+  // It does not stop it overwriting the ones it does: every key in `vars`
+  // below is uploaded on each deploy and replaces whatever the dashboard
+  // holds. So the vars the README tells you to own in the dashboard -- the
+  // real coordinates and your bin schedule -- are deliberately absent from
+  // `vars` rather than listed with a placeholder. Listing one here again is
+  // what re-arms the reset-on-every-push; worker/config.ts holds the
+  // placeholder fallbacks instead.
   "keep_vars": true,
 
+  // WEATHER_LAT/LON, HOME_LAT/LON, WORK_LAT/LON and BIN_SCHEDULE are absent on
+  // purpose -- they are dashboard-owned, and keep_vars can only protect a var
+  // this block does not name. See worker/config.ts for what an unset one falls
+  // back to.
   "vars": {
     "TIMEZONE": "Europe/London",
-    "WEATHER_LAT": "51.5000",
-    "WEATHER_LON": "0.1000",
     "WEATHER_LABEL": "Home",
-    "HOME_LAT": "51.5000",
-    "HOME_LON": "0.1000",
-    "WORK_LAT": "51.5100",
-    "WORK_LON": "0.1200",
     "COMMUTE_LABEL": "Work",
     "COMMUTE_HOME_LABEL": "Home",
     "COMMUTE_MORNING_WINDOW_START": "05:30",
     "COMMUTE_MORNING_WINDOW_END": "09:00",
     "COMMUTE_AFTERNOON_WINDOW_START": "15:00",
     "COMMUTE_AFTERNOON_WINDOW_END": "19:00",
-    "COMMUTE_WINDOW_START": "05:30",
-    "COMMUTE_WINDOW_END": "09:00",
     "COMMUTE_DAYS": "1,2,3,4,5",
     "TFL_ROAD_IDS": "a12,a13,a406,m25",
     "TFL_LINE_MODES": "tube",
     "CRYPTO_IDS": "ethereum,bitcoin,uniswap,chainlink,arbitrum,1inch,sei-network,render-token,solana,ondo-finance",
     "CRYPTO_VS": "usd",
     "BIN_PROVIDER": "havering",
-    // Placeholder pattern: two fortnightly rounds offset by a week. Replace
-    // "anchor" with a date you know a collection actually happened on.
-    "BIN_SCHEDULE": "[{\"kinds\":[\"general\",\"food\"],\"anchor\":\"2026-01-07\",\"intervalDays\":14},{\"kinds\":[\"recycling\",\"garden\",\"food\"],\"anchor\":\"2026-01-14\",\"intervalDays\":14}]",
     "MOCK": "false"
   }
 }
