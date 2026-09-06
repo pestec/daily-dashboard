@@ -175,26 +175,30 @@ export interface MapView {
    * is what stops it being used elsewhere.
    */
   key: string;
-  /** Vertical centre. The horizontal centre comes from the limits below
-   *  when they are set, and from this pair's `lon` when they are not. */
+  /**
+   * The centre, already resolved by the Worker from whichever of the
+   * north/south and east/west limits are configured, or from MAP_LAT/MAP_LON,
+   * or from the commute's home end.
+   */
   lat: number;
   lon: number;
-  /** Fallback framing, used only when the limits below are unset. */
-  zoom: number;
+  /** A zoom pinned by hand, which wins over anything derived from the limits
+   *  below. Null to let them decide. */
+  zoom: number | null;
   /**
    * What should sit at the tile's left and right edges, as longitudes.
    *
    * This is the framing that is actually asked for out loud -- "the airport
    * on the left, the retail park on the right" -- and naming the edges is
    * the only way to hit it exactly, since the zoom that satisfies it depends
-   * on how many pixels wide the tile happens to be. The board derives the
-   * zoom and the horizontal centre from these two; both null means fall back
-   * to `lon` and `zoom`.
+   * on how many pixels wide the tile happens to be. Only the zoom is derived
+   * here; the centre they imply has already been folded into `lon`.
    *
-   * Note what this cannot do. Coverage follows the tile's own proportions,
-   * so fixing the east-west extent fixes the north-south extent with it, at
-   * the tile's height-to-width ratio. There is no third number that widens
-   * the view vertically.
+   * Note what the north/south pair cannot do, and why there is no equivalent
+   * of this for it. Coverage follows the tile's own proportions, so fixing
+   * the east-west extent fixes the north-south extent with it, at the tile's
+   * height-to-width ratio. Latitudes can move the view; nothing but a taller
+   * tile can deepen it.
    */
   westLon: number | null;
   eastLon: number | null;

@@ -30,7 +30,9 @@ export interface Config {
   map: {
     lat: number;
     lon: number;
-    zoom: number;
+    /** A zoom pinned by hand, which overrides anything derived. Null to let
+     *  the limits decide. */
+    zoom: number | null;
     westLon: number | null;
     eastLon: number | null;
     mapId: string | null;
@@ -95,55 +97,52 @@ const DEFAULT_CRYPTO_IDS: readonly string[] = [
 ];
 
 /**
- * Zoom for the traffic map, and the range it is allowed to take.
- *
- * The brief was "as far out as possible while still showing live traffic",
- * and the traffic layer is what sets the floor: Google thins it as you zoom
- * out, so somewhere below 10 it stops being a picture of your area and
- * becomes a few coloured motorways on an empty field. The ceiling is the
- * opposite failure -- past 14 the surrounding network falls off the edges and
- * only your own streets are left, which no longer answers "is it bad out
- * there".
- *
- * 11 covers roughly 55km across the width of the tile from a 1920px board,
- * which for an east London centre reaches the M25 in both directions.
- *
- * This is only the fallback now. Set MAP_WEST_LON and MAP_EAST_LON and the
- * board derives the zoom from them instead, which is the better way round:
- * the edges are what anyone actually has an opinion about, and the zoom that
- * puts them there depends on the tile's pixel width. The clamp range lives
- * in shared/mapFraming.ts, since both sides now apply it.
- */
-const DEFAULT_MAP_ZOOM = 11;
-
-function mapZoom(raw: string | undefined): number {
-  return clampMapZoom(Math.round(num(raw, DEFAULT_MAP_ZOOM)));
-}
-
-/**
- * The two longitudes that frame the tile, or nulls.
+ * A pair of limits along one axis, or null.
  *
  * All or nothing, and only in the right order. One limit on its own says
- * nothing about how wide the view should be, and a west that sits east of
- * the east would compute a negative span -- both would silently produce a
- * frame with no relationship to what was asked for, so both fall back to
- * MAP_ZOOM instead, which at least renders a map of the right place.
+ * nothing about where the view should sit, and a pair the wrong way round
+ * spans a negative distance -- both would silently produce a frame with no
+ * relationship to what was asked for, so neither is half-applied.
  */
-function mapLimits(
-  west: string | undefined,
-  east: string | undefined,
-): { westLon: number | null; eastLon: number | null } {
-  const none = { westLon: null, eastLon: null };
+function limitPair(
+  lowRaw: string | undefined,
+  highRaw: string | undefined,
+): { low: number; high: number } | null {
+  if (lowRaw === undefined || lowRaw === "") return null;
+  if (highRaw === undefined || highRaw === "") return null;
 
-  if (west === undefined || west === "") return none;
-  if (east === undefined || east === "") return none;
+  const low = Number(lowRaw);
+  const high = Number(highRaw);
+  if (!Number.isFinite(low) || !Number.isFinite(high)) return null;
+  if (low >= high) return null;
 
-  const westLon = Number(west);
-  const eastLon = Number(east);
-  if (!Number.isFinite(westLon) || !Number.isFinite(eastLon)) return none;
-  if (westLon >= eastLon) return none;
+  return { low, high };
+}
 
-  return { westLon, eastLon };
+const midpoint = (pair: { low: number; high: number }): number =>
+  (pair.low + pair.high) / 2;
+
+/**
+ * A zoom pinned by hand, or null to let the limits decide.
+ *
+ * Pinning wins over the zoom derived from MAP_WEST_LON/MAP_EAST_LON, which
+ * is the only arrangement that makes this a usable knob: the edges get the
+ * framing into the right area, and then this is what you turn while looking
+ * at the screen. The limits still set the centre when it is pinned, so
+ * turning it zooms into the middle of the frame they describe rather than
+ * jumping somewhere else.
+ *
+ * The distinction is between "absent" and "set", not between values -- which
+ * is why this reads the raw var rather than going through num() with a
+ * default, since that cannot tell an unset var from one set to 11.
+ */
+function pinnedZoom(raw: string | undefined): number | null {
+  if (raw === undefined || raw === "") return null;
+
+  const zoom = Number(raw);
+  if (!Number.isFinite(zoom)) return null;
+
+  return clampMapZoom(zoom);
 }
 
 const VALID_BIN_KINDS: readonly string[] = ["general", "recycling", "garden", "food"];
@@ -185,6 +184,45 @@ function parseBinRules(raw: string | undefined): BinRule[] {
   return rules;
 }
 
+/**
+ * Where the traffic map looks, from four optional pairs of limits and a pin.
+ *
+ * Both axes work the same way: name what should sit at the two edges and the
+ * centre falls out as the midpoint. They are not symmetrical in what else
+ * they do, though, and cannot be made so. East and west also decide the
+ * zoom, because longitude maps linearly onto the tile's width. North and
+ * south only move the view up and down -- a map covers ground in proportion
+ * to its container, so once the width is fixed the height is fixed with it,
+ * and there is no arrangement of two latitudes that changes that. Asking for
+ * a taller view means a taller tile.
+ *
+ * Everything is optional and everything degrades to the layer beneath it:
+ * limits, then MAP_LAT/MAP_LON, then the commute's home end -- which means
+ * the tile is centred on the house with no map configuration at all.
+ */
+function mapConfig(env: Env): Config["map"] {
+  const horizontal = limitPair(env.MAP_WEST_LON, env.MAP_EAST_LON);
+  const vertical = limitPair(env.MAP_SOUTH_LAT, env.MAP_NORTH_LAT);
+
+  return {
+    lat:
+      vertical !== null
+        ? midpoint(vertical)
+        : num(env.MAP_LAT, num(env.HOME_LAT, PLACEHOLDER_HOME.lat)),
+    lon:
+      horizontal !== null
+        ? midpoint(horizontal)
+        : num(env.MAP_LON, num(env.HOME_LON, PLACEHOLDER_HOME.lon)),
+    zoom: pinnedZoom(env.MAP_ZOOM),
+    // Still sent even when the zoom is pinned: the board needs the span to
+    // report what the limits would have given, and sending them
+    // conditionally would make /api/board lie about the configuration.
+    westLon: horizontal?.low ?? null,
+    eastLon: horizontal?.high ?? null,
+    mapId: env.MAP_ID !== undefined && env.MAP_ID !== "" ? env.MAP_ID : null,
+  };
+}
+
 export function readConfig(env: Env): Config {
   return {
     timezone: env.TIMEZONE || "Europe/London",
@@ -214,17 +252,7 @@ export function readConfig(env: Env): Config {
       roadIds: listOrDefault(env.TFL_ROAD_IDS, ["a12", "a13", "a406"]),
       lineModes: listOrDefault(env.TFL_LINE_MODES, ["tube"]),
     },
-    map: {
-      // Defaulting to the commute's home end means the tile is centred on the
-      // house with no extra configuration at all; MAP_LAT/MAP_LON exist for
-      // the case where you want the view offset towards the roads you
-      // actually care about rather than sitting exactly on the roof.
-      lat: num(env.MAP_LAT, num(env.HOME_LAT, PLACEHOLDER_HOME.lat)),
-      lon: num(env.MAP_LON, num(env.HOME_LON, PLACEHOLDER_HOME.lon)),
-      zoom: mapZoom(env.MAP_ZOOM),
-      ...mapLimits(env.MAP_WEST_LON, env.MAP_EAST_LON),
-      mapId: env.MAP_ID !== undefined && env.MAP_ID !== "" ? env.MAP_ID : null,
-    },
+    map: mapConfig(env),
     crypto: {
       ids: listOrDefault(env.CRYPTO_IDS, DEFAULT_CRYPTO_IDS),
       vsCurrency: (env.CRYPTO_VS || "usd").toLowerCase(),

@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
-import { zoomForLongitudeSpan } from "../../../shared/mapFraming.ts";
+import {
+  MAP_ZOOM_DEFAULT,
+  zoomForLongitudeSpan,
+} from "../../../shared/mapFraming.ts";
 import type { MapView } from "../../../shared/types.ts";
 import { useSlowOffset } from "../../hooks/useBurnInShift.ts";
 import { isNightHour, zonedHour } from "../../hooks/useNightDim.ts";
@@ -86,7 +89,7 @@ export function MapTile({ view, clock }: Props) {
   const status: Status = attempt?.view === token ? attempt.status : "loading";
 
   useEffect(() => {
-    if (key === null || lat === null || lon === null || zoom === null) return;
+    if (key === null || lat === null || lon === null) return;
     if (asleep) return;
 
     // Captured once. Effects run after the host is in the DOM, and holding
@@ -123,11 +126,15 @@ export function MapTile({ view, clock }: Props) {
         // scaled as a whole -- a CSS transform, which does not change layout
         // widths -- so this tile is 1229px for the life of the page and there
         // is nothing to re-measure on.
-        const framed = frame(frameRef.current, westLon, eastLon);
-        const requested = framed?.zoom ?? zoom;
+        // A pinned zoom wins; otherwise the limits decide; otherwise the
+        // default. The centre is not part of this -- the Worker resolved it
+        // from the same limits already, so zooming in with a pin zooms into
+        // the middle of the frame the limits describe.
+        const derived = derivedZoom(frameRef.current, westLon, eastLon);
+        const requested = zoom ?? derived ?? MAP_ZOOM_DEFAULT;
 
         const map = new maps.Map(host, {
-          center: { lat, lng: framed?.centreLon ?? lon },
+          center: { lat, lng: lon },
           zoom: requested,
           isFractionalZoomEnabled: true,
           // A cloud-styled map id and inline styles are mutually exclusive:
@@ -237,27 +244,21 @@ function blanked(clock: Date): boolean {
 }
 
 /**
- * Centre and zoom derived from the configured east-west limits, or null when
- * they are not set and the tile should use its own `lon` and `zoom`.
+ * The zoom that puts the configured east-west limits on the tile's two edges,
+ * or null when they are not set or the element has not been laid out.
  *
- * The limits define the horizontal centre as well as the zoom: asking for a
- * particular thing at each edge fixes the midpoint between them, and honouring
- * the span while centring somewhere else would put one of the two limits off
- * screen. The vertical centre is left alone -- there is no second pair for it,
- * because north-south coverage is not a free choice: it is whatever the tile's
- * height-to-width ratio makes of the east-west extent.
+ * Only the zoom: the centre those limits imply was resolved by the Worker
+ * before the payload was sent, so that a pinned zoom still zooms into the
+ * middle of the frame they describe rather than somewhere else.
  */
-function frame(
+function derivedZoom(
   element: HTMLElement | null,
   westLon: number | null,
   eastLon: number | null,
-): { centreLon: number; zoom: number } | null {
+): number | null {
   if (element === null || westLon === null || eastLon === null) return null;
 
-  const zoom = zoomForLongitudeSpan(eastLon - westLon, element.clientWidth);
-  if (zoom === null) return null;
-
-  return { centreLon: (westLon + eastLon) / 2, zoom };
+  return zoomForLongitudeSpan(eastLon - westLon, element.clientWidth);
 }
 
 /**

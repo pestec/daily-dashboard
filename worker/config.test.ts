@@ -88,20 +88,31 @@ test("MAP_LAT and MAP_LON offset the view away from the house", () => {
 });
 
 /**
- * The zoom is the one setting meant to be retuned from the dashboard while
- * looking at the TV, which is exactly how a "0", a "25" or a stray letter ends
- * up in it. Every one of those has to land somewhere the traffic layer still
- * draws, because the failure is silent: an out-of-range zoom renders a map,
+ * An unset zoom has to be distinguishable from one set to 11, because the
+ * two now mean opposite things: absent lets the limits decide the framing,
+ * present overrides them. Reading it through a default would collapse the
+ * distinction and quietly pin every board that has never touched the var.
+ */
+test("an unpinned zoom is null, not a number that looks deliberate", () => {
+  assert.equal(readConfig(envWith({})).map.zoom, null);
+  assert.equal(readConfig(envWith({ MAP_ZOOM: "" })).map.zoom, null);
+  assert.equal(readConfig(envWith({ MAP_ZOOM: "wide" })).map.zoom, null);
+});
+
+/**
+ * The zoom is the setting meant to be turned from the dashboard while looking
+ * at the TV, which is exactly how a "0", a "25" or a stray letter ends up in
+ * it. Every one has to land somewhere the traffic layer still draws, because
+ * the failure is silent: an out-of-range zoom renders a perfectly good map,
  * just not one with any traffic on it.
  */
-test("map zoom is clamped to the range the traffic layer is useful over", () => {
-  assert.equal(readConfig(envWith({})).map.zoom, 11);
+test("a pinned zoom is clamped to the range traffic is drawn over", () => {
   assert.equal(readConfig(envWith({ MAP_ZOOM: "13" })).map.zoom, 13);
   assert.equal(readConfig(envWith({ MAP_ZOOM: "0" })).map.zoom, 9);
-  assert.equal(readConfig(envWith({ MAP_ZOOM: "25" })).map.zoom, 14);
-  assert.equal(readConfig(envWith({ MAP_ZOOM: "12.6" })).map.zoom, 13);
-  assert.equal(readConfig(envWith({ MAP_ZOOM: "" })).map.zoom, 11);
-  assert.equal(readConfig(envWith({ MAP_ZOOM: "wide" })).map.zoom, 11);
+  assert.equal(readConfig(envWith({ MAP_ZOOM: "25" })).map.zoom, 16);
+  // Not rounded. A fractional pin is honoured, since the derived zooms this
+  // sits alongside are fractional too.
+  assert.equal(readConfig(envWith({ MAP_ZOOM: "12.6" })).map.zoom, 12.6);
 });
 
 test("an unset map id stays null rather than becoming an empty style id", () => {
@@ -175,3 +186,69 @@ test("limits do not disturb the fallback zoom or the vertical centre", () => {
 function pickLimits(config: ReturnType<typeof readConfig>) {
   return { westLon: config.map.westLon, eastLon: config.map.eastLon };
 }
+
+/**
+ * The north/south pair, which moves the view up and down and nothing else.
+ *
+ * It resolves to a centre on the Worker rather than travelling to the board
+ * as a pair, because unlike east/west there is nothing for the board to do
+ * with it: the tile's height is already spoken for by its width.
+ */
+test("north and south latitudes centre the view between them", () => {
+  const config = readConfig(envWith({
+    HOME_LAT: "12.3456789",
+    MAP_NORTH_LAT: "51.5600",
+    MAP_SOUTH_LAT: "51.4800",
+  }));
+
+  // Tolerance, not equality: the midpoint of two decimal latitudes is a
+  // binary-floating-point result and 51.56/51.48 lands on 51.519999999999996.
+  assert.ok(Math.abs(config.map.lat - 51.52) < 1e-9, String(config.map.lat));
+  // And the commute is untouched: this frames a picture, it does not move
+  // either end of the route.
+  assert.equal(config.commute.home.lat, 12.3456789);
+});
+
+test("east and west longitudes centre the view between them", () => {
+  const config = readConfig(envWith({
+    HOME_LON: "-98.7654321",
+    MAP_WEST_LON: "-0.0200",
+    MAP_EAST_LON: "0.2800",
+  }));
+
+  assert.equal(config.map.lon, 0.13);
+  assert.equal(config.commute.home.lon, -98.7654321);
+});
+
+/** Same all-or-nothing rule as the horizontal pair, and the same reason: a
+ *  frame built from one latitude is not a near-miss. */
+test("a half-configured or reversed north/south pair falls back to MAP_LAT", () => {
+  const lat = (overrides: Record<string, string>) =>
+    readConfig(envWith({ MAP_LAT: "51.5000", ...overrides })).map.lat;
+
+  assert.equal(lat({ MAP_NORTH_LAT: "51.56" }), 51.5);
+  assert.equal(lat({ MAP_SOUTH_LAT: "51.48" }), 51.5);
+  assert.equal(lat({ MAP_NORTH_LAT: "51.48", MAP_SOUTH_LAT: "51.56" }), 51.5);
+  assert.equal(lat({ MAP_NORTH_LAT: "51.5", MAP_SOUTH_LAT: "51.5" }), 51.5);
+  assert.equal(lat({ MAP_NORTH_LAT: "north", MAP_SOUTH_LAT: "51.48" }), 51.5);
+});
+
+/**
+ * The pin wins, but only over the zoom -- the limits still place the centre.
+ * That is what makes the two usable together: get the framing roughly right
+ * with the edges, then turn the zoom without the view jumping elsewhere.
+ */
+test("a pinned zoom overrides the limits without moving the centre", () => {
+  const config = readConfig(envWith({
+    MAP_WEST_LON: "-0.0200",
+    MAP_EAST_LON: "0.2800",
+    MAP_ZOOM: "14",
+  }));
+
+  assert.equal(config.map.zoom, 14);
+  assert.equal(config.map.lon, 0.13);
+  // Still reported, so /api/board describes the configuration honestly
+  // rather than hiding the limits behind the pin.
+  assert.equal(config.map.westLon, -0.02);
+  assert.equal(config.map.eastLon, 0.28);
+});

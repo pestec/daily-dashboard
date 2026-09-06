@@ -60,9 +60,15 @@ interface DashboardVars {
    *  which is the whole point, since the right zoom is found by looking. */
   MAP_ZOOM?: string;
   /** Longitudes to put at the tile's left and right edges. Set both, and
-   *  they replace MAP_ZOOM and the horizontal half of the centre. */
+   *  they set the horizontal centre and, unless MAP_ZOOM is pinned, the
+   *  zoom. */
   MAP_WEST_LON?: string;
   MAP_EAST_LON?: string;
+  /** Latitudes to sit at the top and bottom. These move the view up and
+   *  down only -- see the note in worker/config.ts on why they cannot set
+   *  how much ground it covers. */
+  MAP_NORTH_LAT?: string;
+  MAP_SOUTH_LAT?: string;
   MAP_ID?: string;
 }
 

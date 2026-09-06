@@ -14,15 +14,23 @@
  *
  * The floor is Google's own thinning: it draws less traffic the further out
  * you go, and below 10 the tile stops being a picture of an area and becomes a
- * few coloured motorways on an empty field. The ceiling is the opposite
- * failure -- past 14 the surrounding network has fallen off the edges and only
- * your own streets are left, which no longer answers "is it bad out there".
+ * few coloured motorways on an empty field. That one is a real limit -- past
+ * it the tile silently stops doing its job.
  *
- * Shared because both sides clamp: the Worker when MAP_ZOOM is set by hand,
- * and the board when it derives a zoom from the configured limits.
+ * The ceiling is softer, and has been raised: 14 was a judgement about how
+ * much surrounding network is worth keeping on screen, which is not a
+ * judgement worth enforcing against the person actually looking at the
+ * screen. 16 is roughly where a 1229px tile is down to a couple of
+ * kilometres and the question stops being about traffic at all.
+ *
+ * Shared because both sides clamp: the Worker when MAP_ZOOM is pinned by
+ * hand, and the board when it derives a zoom from the configured limits.
  */
 export const MAP_ZOOM_MIN = 9;
-export const MAP_ZOOM_MAX = 14;
+export const MAP_ZOOM_MAX = 16;
+
+/** Used when nothing is pinned and no limits are set to derive from. */
+export const MAP_ZOOM_DEFAULT = 11;
 
 /** Google's world is 256px square at zoom 0, and doubles with every step. */
 const WORLD_TILE_PX = 256;
