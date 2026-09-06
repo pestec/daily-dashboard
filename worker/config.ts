@@ -15,18 +15,30 @@ export interface Config {
   weather: { lat: number; lon: number; label: string };
   commute: {
     home: { lat: number; lon: number };
+    homeLabel: string;
     work: { lat: number; lon: number };
-    label: string;
-    windowStartMinutes: number;
-    windowEndMinutes: number;
+    workLabel: string;
+    morningStartMinutes: number;
+    morningEndMinutes: number;
+    afternoonStartMinutes: number;
+    afternoonEndMinutes: number;
     /** ISO-ish weekday numbers, 0 = Sunday. */
     days: number[];
-    typicalMinutes: number;
   };
   tfl: { roadIds: string[]; lineModes: string[] };
   crypto: { ids: string[]; vsCurrency: string };
   bins: { provider: string; rules: BinRule[] };
 }
+
+const COMMUTE_HOME = {
+  lat: 51.53578437178105,
+  lon: 0.19729711541201045,
+} as const;
+
+const COMMUTE_WORK = {
+  lat: 51.505184346371664,
+  lon: 0.05209853605892316,
+} as const;
 
 function num(raw: string | undefined, fallback: number): number {
   const parsed = Number(raw);
@@ -39,6 +51,35 @@ function list(raw: string | undefined): string[] {
     .map((entry) => entry.trim())
     .filter((entry) => entry.length > 0);
 }
+
+function listOrDefault(
+  raw: string | undefined,
+  fallback: readonly string[],
+): string[] {
+  const values = list(raw);
+  return values.length > 0 ? values : [...fallback];
+}
+
+/**
+ * CoinGecko ids, in the order they should appear on the board. These are ids,
+ * not ticker symbols: `link` is Chainlink's symbol but `chainlink` is its id,
+ * and getting that wrong silently drops the coin rather than failing loudly.
+ *
+ * An id CoinGecko does not recognise costs only itself -- the response simply
+ * has no entry for it and the strip renders the other nine.
+ */
+const DEFAULT_CRYPTO_IDS: readonly string[] = [
+  "ethereum",
+  "bitcoin",
+  "uniswap",
+  "chainlink",
+  "arbitrum",
+  "1inch",
+  "sei-network",
+  "render-token",
+  "solana",
+  "ondo-finance",
+];
 
 const VALID_BIN_KINDS: readonly string[] = ["general", "recycling", "garden", "food"];
 
@@ -88,24 +129,32 @@ export function readConfig(env: Env): Config {
       label: env.WEATHER_LABEL || "Home",
     },
     commute: {
-      home: { lat: num(env.HOME_LAT, 51.5), lon: num(env.HOME_LON, -0.1) },
-      work: { lat: num(env.WORK_LAT, 51.51), lon: num(env.WORK_LON, -0.12) },
-      label: env.COMMUTE_LABEL || "Work",
-      windowStartMinutes: parseHhMm(env.COMMUTE_WINDOW_START || "") ?? 6 * 60,
-      windowEndMinutes: parseHhMm(env.COMMUTE_WINDOW_END || "") ?? 9 * 60 + 30,
+      home: { lat: COMMUTE_HOME.lat, lon: COMMUTE_HOME.lon },
+      homeLabel: env.COMMUTE_HOME_LABEL || "Home",
+      work: { lat: COMMUTE_WORK.lat, lon: COMMUTE_WORK.lon },
+      workLabel: env.COMMUTE_LABEL || "Work",
+      morningStartMinutes:
+        parseHhMm(env.COMMUTE_MORNING_WINDOW_START || "") ??
+        parseHhMm(env.COMMUTE_WINDOW_START || "") ??
+        5 * 60 + 30,
+      morningEndMinutes:
+        parseHhMm(env.COMMUTE_MORNING_WINDOW_END || "") ??
+        parseHhMm(env.COMMUTE_WINDOW_END || "") ??
+        9 * 60,
+      afternoonStartMinutes: parseHhMm(env.COMMUTE_AFTERNOON_WINDOW_START || "") ?? 15 * 60,
+      afternoonEndMinutes: parseHhMm(env.COMMUTE_AFTERNOON_WINDOW_END || "") ?? 19 * 60,
       days: list(env.COMMUTE_DAYS).map(Number).filter(Number.isInteger),
-      typicalMinutes: num(env.COMMUTE_TYPICAL_MINUTES, 30),
     },
     tfl: {
-      roadIds: list(env.TFL_ROAD_IDS),
-      lineModes: list(env.TFL_LINE_MODES),
+      roadIds: listOrDefault(env.TFL_ROAD_IDS, ["a12", "a13", "a406", "m25"]),
+      lineModes: listOrDefault(env.TFL_LINE_MODES, ["tube"]),
     },
     crypto: {
-      ids: list(env.CRYPTO_IDS),
-      vsCurrency: (env.CRYPTO_VS || "gbp").toLowerCase(),
+      ids: listOrDefault(env.CRYPTO_IDS, DEFAULT_CRYPTO_IDS),
+      vsCurrency: (env.CRYPTO_VS || "usd").toLowerCase(),
     },
     bins: {
-      provider: env.BIN_PROVIDER || "manual",
+      provider: env.BIN_PROVIDER || "havering",
       rules: parseBinRules(env.BIN_SCHEDULE),
     },
   };

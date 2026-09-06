@@ -9,7 +9,7 @@ import { fetchJson, UpstreamError } from "../http.ts";
  * offset reported separately. That is deliberate over `timeformat=unixtime`:
  * the daily buckets are local midnights, so turning them into dates via
  * toISOString() lands on the previous day for any zone ahead of UTC -- the
- * 3-day forecast would be labelled a day early all summer.
+ * forecast would be labelled a day early all summer.
  */
 interface OpenMeteoResponse {
   utc_offset_seconds?: number;
@@ -40,7 +40,7 @@ interface OpenMeteoResponse {
 }
 
 const HOURS_AHEAD = 12;
-const FORECAST_DAYS = 3;
+const FORECAST_DAYS = 7;
 
 /** 3600 -> "+01:00". Qualifies the local timestamps so the browser cannot
  *  reinterpret them in whatever zone the TV happens to be set to. */

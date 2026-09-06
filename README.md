@@ -1,7 +1,7 @@
 # Daily Dashboard
 
-An always-on information board for a TV. Weather, morning commute, transport
-disruption, bin collections, crypto, and a clock — on one fixed 1920×1080
+An always-on information board for a TV. Clock and weather, morning commute,
+transport disruption, bin collections and crypto — on one fixed 1920×1080
 screen with no scrolling and nothing to interact with.
 
 Built to run for weeks unattended in a living room: dark palette, per-tile
@@ -16,7 +16,7 @@ a nightly reload.
   costs API quota and the board never waits on a third party.
 
 ```
-Cron (every 2 min) ──► refresh whatever is due ──► KV
+Cron (every 5 min) ──► refresh whatever is due ──► KV
                                                    │
                     TV ──► GET /api/board ─────────┘  (cache only)
 ```
@@ -109,30 +109,70 @@ are placeholders. Set the real ones in the Cloudflare dashboard under
 `WEATHER_LAT`, `WEATHER_LON`, `HOME_LAT`, `HOME_LON`, `WORK_LAT`, `WORK_LON`,
 and your own `BIN_SCHEDULE`.
 
+> This is only safe because `wrangler.jsonc` sets `keep_vars: true`. By default
+> wrangler treats its config as the source of truth and overwrites or deletes
+> dashboard-set vars on every deploy — which would silently reset your real
+> location to the placeholder on the next push. Do not remove that flag.
+
+Note that a variable change only reaches the board once that source next
+refreshes, since tiles render from the cached payload — up to 15 minutes for
+weather.
+
 Every variable is documented in [`.env.example`](.env.example).
 
-### 4. Secrets (both optional)
+### 3.5 Browser Rendering for bins
+
+The Havering provider now depends on Cloudflare Browser Rendering. Keep the
+`browser.binding` entry in [`wrangler.jsonc`](wrangler.jsonc) as `BROWSER`, and
+enable Browser Rendering for the Worker in Cloudflare if your account requires
+an explicit toggle.
+
+### 4. Secrets
 
 ```bash
-npx wrangler secret put TOMTOM_API_KEY
+npx wrangler secret put GOOGLE_ROUTES_API_KEY
 npx wrangler secret put COINGECKO_API_KEY
 ```
 
-Locally, copy `.dev.vars.example` to `.dev.vars` instead — it is gitignored.
+Or add them in the dashboard under **Worker → Settings → Variables and
+Secrets** → *Add* → type **Secret**. Either way they arrive as `env.<NAME>`;
+nothing in the code cares which route was used, and a secret set in the
+dashboard survives a deploy. Locally, copy `.dev.vars.example` to `.dev.vars`
+instead — it is gitignored.
 
-**The board works with no secrets at all.** Weather (Open-Meteo), disruption
-(TfL) and crypto (CoinGecko) are all keyless, and bins come from your config.
-Without `TOMTOM_API_KEY` the commute tile shows `COMMUTE_TYPICAL_MINUTES`,
-clearly labelled as typical, and never calls the routing API.
+**`GOOGLE_ROUTES_API_KEY` is genuinely optional.** Without it the commute tile
+shows a labelled typical fallback and never calls the routing API.
+
+**`COINGECKO_API_KEY` is optional in theory and required in practice.**
+CoinGecko's keyless tier is limited per source IP, and a Worker egresses from
+shared Cloudflare datacenter ranges — so it returns 429 no matter how little
+this board asks for, and the crypto tile silently serves its last good value
+behind a staleness marker until you add one.
+
+Use a **Demo** key, which is free. This code sends `x-cg-demo-api-key` to
+`api.coingecko.com`, which is the Demo pairing; a paid **Pro** key wants
+`pro-api.coingecko.com` and `x-cg-pro-api-key` and will get a 400 here.
+
+Check it took with `/api/debug/crypto-live` — see below.
 
 ## How it behaves
 
-**The board changes with the time of day.** Inside the commute window on a
-configured weekday it switches to a morning layout: the commute takes the
-top-right with a large colour-coded number, and weather shrinks to a wide band
-showing only the next 12 hours. The rest of the day, weather takes the largest
-cell and the commute shrinks to a single line. The Worker decides which, so the
-layout does not depend on the TV's clock.
+**Three tiles at a time, sometimes four.** Weather — which carries the clock —
+holds the top-left block permanently, so the two things glanced at most never
+move. Crypto owns the right-hand column. The block below weather belongs to
+whichever of commute or disruption is relevant, and they are never both up.
+
+**The board changes with the time of day.** On configured weekdays, commute is
+active in two windows: 05:30-09:00 (Home -> Work) and 15:00-19:00
+(Work -> Home). Inside a window the only question is how long the drive is, so
+the commute tile takes the slot; outside one it is whether the network is
+broken, so the disruption board does. The Worker decides which, so the layout
+does not depend on the TV's clock.
+
+**Bins only shows up when it matters.** The tile appears on the eve of a
+collection and is absent every other day — a panel that spends six days a week
+saying "not yet" is six days of clutter for one day of use. It takes the bottom
+of the crypto column when it does appear.
 
 **Each tile fails on its own.** Every source carries its own status, timestamp
 and TTL. A dead source greys one tile; a stale one keeps showing its last good
@@ -154,16 +194,43 @@ at a quiet hour the page reloads itself.
 
 | Tile | Source | Key | Refresh | Notes |
 | --- | --- | --- | --- | --- |
-| Weather | Open-Meteo | none | 15 min | Current, next 12 hours, next 3 days |
-| Commute | TomTom Routing | optional | 2 min | Morning window only — ~105 calls a weekday, well inside the 2,500/day free tier |
-| Disruption | TfL Unified API | none | 5 min | Line status plus road corridors |
-| Bins | Config schedule | none | 6 h | Pluggable provider, see below |
-| Crypto | CoinGecko | optional | 5 min | |
+| Weather + clock | Open-Meteo | none | 15 min | Current, next 12 hours, next 7 days |
+| Commute | Google Routes API | optional | 5 min | Morning and afternoon windows, one direction at a time |
+| Disruption | TfL Unified API | none | 5 min | All 11 tube lines + A12/A13/A406/M25, shown outside commute windows |
+| Bins | Havering collection-day portal (rendered) | none | ~3.5 days | Only on the eve of a collection; scrape, then manual-schedule fallback |
+| Crypto | CoinGecko | optional | 5 min | 10 tickers in USD, with 24h and 7d change |
+
+### Commute debug endpoint
+
+`/api/debug/commute-live` performs one live Google Routes call and returns both
+the raw upstream JSON and the parsed commute payload. It is intended for
+shape-verification while setting up route fields and should not be polled.
+
+### Crypto debug endpoint
+
+`/api/debug/crypto-live` returns the coin ids and currency the Worker actually
+resolved, plus one live CoinGecko fetch that bypasses KV. Use it when the tile
+shows the wrong coins: a failed refresh keeps the last good value, so stale
+data and a broken upstream look identical on the board.
+
+### Bins debug endpoint
+
+`/api/debug/bins-live` performs one live bins-provider fetch and returns the
+raw provider payload plus the parsed bins result. In rendered Havering mode the
+raw payload is the extracted table rows from the browser session, which helps
+confirm exactly what was visible after page JavaScript ran.
 
 ### Bins
 
-Council endpoints are unreliable and change without notice, so the default
-provider is a recurring schedule you configure yourself, in `BIN_SCHEDULE`:
+Default provider is Havering's collection-day page for your configured street:
+
+`https://portal.havering.gov.uk/Process-Waste-CollectionDays/?type=CD&uprn=010096017137&usrn=21300590`
+
+It uses Cloudflare Browser Rendering to load the page as a real browser,
+waits for the rendered table rows, then extracts Domestic Waste and Recycling
+dates into board kinds. If browser rendering is unavailable, or rows cannot be
+read, it falls back to the manual recurring schedule configured in
+`BIN_SCHEDULE`:
 
 ```json
 [
@@ -175,13 +242,9 @@ provider is a recurring schedule you configure yourself, in `BIN_SCHEDULE`:
 `anchor` is any date you know a collection actually happened on; everything else
 is derived from it. Valid kinds are `general`, `recycling`, `garden`, `food`.
 
-`worker/sources/bins/havering.ts` is a deliberate stub implementing the same
-interface. Havering publishes no documented API for collection dates, so the
-only option would be scraping a page that changes without warning — which
-breaks quietly on a screen nobody is watching. Selecting it falls back to the
-manual schedule, and the tile reports which provider actually answered. To add
-a real one, implement `BinProvider` and register it in
-`worker/sources/bins/index.ts`.
+`worker/sources/bins/havering.ts` implements the scraper. Providers still share
+the same interface, so any future council/provider can be swapped in by
+registering it in `worker/sources/bins/index.ts`.
 
 ## Device setup
 

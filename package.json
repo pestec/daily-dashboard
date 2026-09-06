@@ -16,6 +16,7 @@
     "cf-typegen": "wrangler types"
   },
   "dependencies": {
+    "@cloudflare/puppeteer": "^1.4.0",
     "@fontsource/fira-code": "^5.3.0",
     "@fontsource/fira-sans": "^5.3.0",
     "react": "^19.2.8",

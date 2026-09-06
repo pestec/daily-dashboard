@@ -34,7 +34,7 @@ export function Tile<T>({
 
   return (
     <section
-      className={`${area} @container flex min-h-0 min-w-0 flex-col gap-5 overflow-hidden rounded-2xl border border-border/40 bg-surface p-8 ${
+      className={`${area} glass-panel @container flex min-h-0 min-w-0 flex-col gap-5 overflow-hidden rounded-2xl p-8 ${
         dead ? "opacity-50" : ""
       }`}
     >

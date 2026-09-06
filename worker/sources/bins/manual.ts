@@ -1,5 +1,6 @@
 import type { BinCollection, BinKind, Bins } from "../../../shared/types.ts";
 import type { Config } from "../../config.ts";
+import type { Env } from "../../env.ts";
 import { addDays, daysBetween } from "../../time.ts";
 import type { BinProvider } from "./types.ts";
 
@@ -21,7 +22,7 @@ function nextOccurrence(anchor: string, intervalDays: number, today: string): st
 export const manualProvider: BinProvider = {
   name: "manual",
 
-  fetch(config: Config, today: string): Promise<Bins> {
+  fetch(config: Config, _env: Env, today: string): Promise<Bins> {
     const { rules } = config.bins;
 
     // Two occurrences per rule is enough to fill "next" and "following" even

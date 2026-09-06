@@ -58,7 +58,7 @@ export interface Weather {
   now: WeatherNow;
   /** Next 12 hours. */
   hourly: WeatherHour[];
-  /** Next 3 days, today first. */
+  /** Next 7 days, today first. */
   daily: WeatherDay[];
 }
 
@@ -68,7 +68,7 @@ export interface Weather {
 
 export type TrafficState = "good" | "slow" | "bad";
 
-/** Inside the morning window: a real TomTom call with live traffic. */
+/** Inside the morning window: a real routing call with live traffic. */
 export interface CommuteLive {
   kind: "live";
   destination: string;
@@ -78,7 +78,7 @@ export interface CommuteLive {
   state: TrafficState;
 }
 
-/** Outside the window: the configured baseline, and no API call at all. */
+/** Outside the window: a typical fallback, and no API call at all. */
 export interface CommuteTypical {
   kind: "typical";
   destination: string;
@@ -97,12 +97,14 @@ export interface DisruptionItem {
   id: string;
   name: string;
   kind: "line" | "road";
+  /** Official line colour when known, e.g. TfL tube line hex. */
+  color?: string;
   status: string;
   severity: DisruptionSeverity;
 }
 
 export interface Tfl {
-  /** Only the things that are not running normally. */
+  /** Monitored lines and roads, sorted by disruption severity. */
   items: DisruptionItem[];
   /** How many lines and roads were checked and found fine, so the tile can say
    *  "all clear" honestly instead of just showing nothing. */
@@ -137,6 +139,10 @@ export interface CryptoTicker {
   symbol: string;
   price: number;
   change24hPct: number;
+  /** Rolling seven-day change. Null when the provider did not return one --
+   *  a newly listed coin has no week of history to compare against, and a
+   *  zero there would read as "flat" rather than "not known". */
+  change7dPct: number | null;
 }
 
 export interface Crypto {
