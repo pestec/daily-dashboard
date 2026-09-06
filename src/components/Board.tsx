@@ -1,8 +1,10 @@
 import type { BoardMode, BoardPayload } from "../../shared/types.ts";
 import { daysUntil } from "../lib/format.ts";
+import { focusOverride } from "../lib/params.ts";
 import { BinsTile } from "./tiles/BinsTile.tsx";
 import { CommuteTile } from "./tiles/CommuteTile.tsx";
 import { CryptoTile } from "./tiles/CryptoTile.tsx";
+import { MapTile } from "./tiles/MapTile.tsx";
 import { TflTile } from "./tiles/TflTile.tsx";
 import { WeatherTile } from "./tiles/WeatherTile.tsx";
 import { TileErrorBoundary } from "./TileErrorBoundary.tsx";
@@ -16,11 +18,14 @@ interface Props {
 /**
  * Three tiles, sometimes four.
  *
- * Commute and disruption share one slot rather than competing for space:
- * inside a commute window the only question is how long the drive is, and
- * outside one it is whether the network is broken. Bins joins them only on the
- * eve of a collection -- a tile that spends six days a week saying "not yet"
- * is six days of clutter for one day of use.
+ * Commute and traffic share one slot rather than competing for space: inside
+ * a commute window the only question is how long the drive is, and outside one
+ * it is what the roads around home look like. Bins joins them only on the eve
+ * of a collection -- a tile that spends six days a week saying "not yet" is
+ * six days of clutter for one day of use.
+ *
+ * The map took the ambient half of that slot from the tube disruption board,
+ * which is still built and still reachable at ?focus=tfl.
  */
 export function Board({ payload, mode, now }: Props) {
   const nowMs = now.getTime();
@@ -31,6 +36,8 @@ export function Board({ payload, mode, now }: Props) {
   // an "Unavailable" panel appearing at random is worse than no panel.
   const next = payload?.bins.data?.next ?? null;
   const showBins = next !== null && daysUntil(next.date, now) === 1;
+
+  const ambientFocus = focusOverride ?? "map";
 
   return (
     <div
@@ -46,9 +53,13 @@ export function Board({ payload, mode, now }: Props) {
         <TileErrorBoundary label="Commute" className="area-focus">
           <CommuteTile source={payload?.commute ?? null} now={nowMs} />
         </TileErrorBoundary>
-      ) : (
+      ) : ambientFocus === "tfl" ? (
         <TileErrorBoundary label="Disruption" className="area-focus">
           <TflTile source={payload?.tfl ?? null} now={nowMs} />
+        </TileErrorBoundary>
+      ) : (
+        <TileErrorBoundary label="Traffic" className="area-focus">
+          <MapTile view={payload?.meta.map ?? null} clock={now} />
         </TileErrorBoundary>
       )}
 

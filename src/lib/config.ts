@@ -25,6 +25,21 @@ export const config = {
   /** Pixel radius of the burn-in shift, and how often it steps. */
   burnInPx: num(env.VITE_BURN_IN_PX, 6),
   burnInMinutes: num(env.VITE_BURN_IN_MINUTES, 10),
+  /**
+   * The traffic map's own burn-in cycle, inside its tile.
+   *
+   * Deliberately a bigger step than the board's and on a period that does not
+   * divide into it, because the map is the one thing on the board whose shape
+   * never changes on its own -- a road network is the same picture every day,
+   * which is precisely the pattern a panel retains. The map layer is oversized
+   * by this many pixels so the drift never uncovers an edge.
+   */
+  mapDriftPx: num(env.VITE_MAP_DRIFT_PX, 16),
+  mapDriftMinutes: num(env.VITE_MAP_DRIFT_MINUTES, 7),
+  /** Blank the map overnight rather than dim it. Nine hours a day of not
+   *  drawing it at all is worth more than any amount of dimming, and there is
+   *  no traffic to report at 03:00 anyway. */
+  mapHideAtNight: bool(env.VITE_MAP_HIDE_AT_NIGHT, true),
   timezone: env.VITE_TIMEZONE ?? "Europe/London",
   locale: env.VITE_LOCALE ?? "en-GB",
 } as const;

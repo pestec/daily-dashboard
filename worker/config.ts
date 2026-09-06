@@ -26,6 +26,7 @@ export interface Config {
     days: number[];
   };
   tfl: { roadIds: string[]; lineModes: string[] };
+  map: { lat: number; lon: number; zoom: number; mapId: string | null };
   crypto: { ids: string[]; vsCurrency: string };
   bins: { provider: string; rules: BinRule[] };
 }
@@ -84,6 +85,31 @@ const DEFAULT_CRYPTO_IDS: readonly string[] = [
   "solana",
   "ondo-finance",
 ];
+
+/**
+ * Zoom for the traffic map, and the range it is allowed to take.
+ *
+ * The brief was "as far out as possible while still showing live traffic",
+ * and the traffic layer is what sets the floor: Google thins it as you zoom
+ * out, so somewhere below 10 it stops being a picture of your area and
+ * becomes a few coloured motorways on an empty field. The ceiling is the
+ * opposite failure -- past 14 the surrounding network falls off the edges and
+ * only your own streets are left, which no longer answers "is it bad out
+ * there".
+ *
+ * 11 covers roughly 55km across the width of the tile from a 1920px board,
+ * which for an east London centre reaches the M25 in both directions. It is a
+ * starting point, not a verdict: MAP_ZOOM is dashboard-owned precisely so it
+ * can be nudged a step either way while looking at the actual screen.
+ */
+const DEFAULT_MAP_ZOOM = 11;
+const MIN_MAP_ZOOM = 9;
+const MAX_MAP_ZOOM = 14;
+
+function mapZoom(raw: string | undefined): number {
+  const zoom = Math.round(num(raw, DEFAULT_MAP_ZOOM));
+  return Math.min(MAX_MAP_ZOOM, Math.max(MIN_MAP_ZOOM, zoom));
+}
 
 const VALID_BIN_KINDS: readonly string[] = ["general", "recycling", "garden", "food"];
 
@@ -152,6 +178,16 @@ export function readConfig(env: Env): Config {
     tfl: {
       roadIds: listOrDefault(env.TFL_ROAD_IDS, ["a12", "a13", "a406"]),
       lineModes: listOrDefault(env.TFL_LINE_MODES, ["tube"]),
+    },
+    map: {
+      // Defaulting to the commute's home end means the tile is centred on the
+      // house with no extra configuration at all; MAP_LAT/MAP_LON exist for
+      // the case where you want the view offset towards the roads you
+      // actually care about rather than sitting exactly on the roof.
+      lat: num(env.MAP_LAT, num(env.HOME_LAT, PLACEHOLDER_HOME.lat)),
+      lon: num(env.MAP_LON, num(env.HOME_LON, PLACEHOLDER_HOME.lon)),
+      zoom: mapZoom(env.MAP_ZOOM),
+      mapId: env.MAP_ID !== undefined && env.MAP_ID !== "" ? env.MAP_ID : null,
     },
     crypto: {
       ids: listOrDefault(env.CRYPTO_IDS, DEFAULT_CRYPTO_IDS),

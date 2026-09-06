@@ -158,9 +158,36 @@ export interface Crypto {
  *  so the board does not depend on the TV's clock being right. */
 export type BoardMode = "morning" | "ambient";
 
+/**
+ * Everything the traffic tile needs to draw a map, resolved by the Worker.
+ *
+ * It rides on the payload rather than being baked into the bundle so the
+ * centre, the zoom and the key all stay dashboard-owned -- the same rule the
+ * real coordinates already follow -- and can be retuned on the TV without a
+ * rebuild. `null` means no key is configured, and the tile says so.
+ */
+export interface MapView {
+  /**
+   * A Maps JavaScript API key. Unlike the routing key this one is *public by
+   * design*: it is handed to the browser to load Google's script, so it also
+   * travels in this payload, which is served unauthenticated. Restrict it by
+   * HTTP referrer and to the Maps JavaScript API alone -- that, not secrecy,
+   * is what stops it being used elsewhere.
+   */
+  key: string;
+  lat: number;
+  lon: number;
+  zoom: number;
+  /** Cloud-styled map id. When set, Google ignores the inline dark style and
+   *  uses the style attached to this id instead. */
+  mapId: string | null;
+}
+
 export interface BoardMeta {
   timezone: string;
   mode: BoardMode;
+  /** Null when no Maps key is configured. */
+  map: MapView | null;
 }
 
 export interface BoardPayload {

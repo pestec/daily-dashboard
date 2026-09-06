@@ -24,6 +24,14 @@ type Vars = {
 interface Secrets {
   GOOGLE_ROUTES_API_KEY?: string;
   COINGECKO_API_KEY?: string;
+  /**
+   * Maps JavaScript API key for the traffic tile. Kept here with the secrets
+   * because it must not be committed, but it is not secret in the way the
+   * other two are: it is served to the browser in /api/board and anyone can
+   * read it. Lock it down with an HTTP referrer restriction and by enabling
+   * only the Maps JavaScript API on it.
+   */
+  GOOGLE_MAPS_BROWSER_KEY?: string;
 }
 
 /**
@@ -44,6 +52,14 @@ interface DashboardVars {
   WORK_LAT?: string;
   WORK_LON?: string;
   BIN_SCHEDULE?: string;
+  /** Traffic map centre. Falls back to the commute's home coordinates, which
+   *  are dashboard-owned for the same reason. */
+  MAP_LAT?: string;
+  MAP_LON?: string;
+  /** Dashboard-owned so the view can be retuned on the TV without a deploy --
+   *  which is the whole point, since the right zoom is found by looking. */
+  MAP_ZOOM?: string;
+  MAP_ID?: string;
 }
 
 interface OptionalBindings {

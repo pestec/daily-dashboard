@@ -219,6 +219,30 @@
     "focus   focus   focus   focus   focus   focus   focus   focus   bins   bins   bins   bins";
 }
 
+/* ---------------------------------------------------------------------------
+   The traffic map's layer.
+
+   Two class names deep on purpose. The blanket `.board section *` transition
+   above is specificity 0,1,2 and would otherwise win over a single class here,
+   silently dropping the 20s ease that makes the drift invisible -- and the
+   same rule would put a 1.5s colour fade on every node Google renders inside
+   the map, which repaints constantly.
+
+   The layer is inset by a negative amount so it overhangs the panel on all
+   four sides; the drift then moves it within that overhang and the panel's
+   own overflow clip hides the edges, so the map never uncovers a gap.
+--------------------------------------------------------------------------- */
+.board .map-layer {
+  position: absolute;
+  inset: var(--map-inset, 0px);
+  transform: translate3d(var(--map-x, 0px), var(--map-y, 0px), 0);
+  transition: transform 20s linear;
+}
+
+.board .map-layer * {
+  transition: none;
+}
+
 .area-weather { grid-area: weather; }
 .area-focus   { grid-area: focus; }
 .area-bins    { grid-area: bins; }

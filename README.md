@@ -1,7 +1,7 @@
 # Daily Dashboard
 
 An always-on information board for a TV. Clock and weather, morning commute,
-transport disruption, bin collections and crypto — on one fixed 1920×1080
+live traffic around home, bin collections and crypto — on one fixed 1920×1080
 screen with no scrolling and nothing to interact with.
 
 Built to run for weeks unattended in a living room: dark palette, per-tile
@@ -59,11 +59,17 @@ Nothing on the board is interactive, so these are how you inspect it.
 | `?debug` | Overlays fetch timings, per-source freshness and errors |
 | `?mock=ambient` \| `morning` \| `degraded` | Serves a fixture, even in production |
 | `?mode=morning` \| `ambient` | Forces a layout |
+| `?focus=map` \| `tfl` | Picks what fills the focus slot outside commute windows |
 | `?night=1` \| `0` | Forces the dim or bright palette |
 
 `?mock=degraded` is the useful one: it puts two dead sources and two stale ones
 on screen at once, so you can check the failure states on the real device
 without breaking anything.
+
+`?focus=tfl` brings back the tube and road disruption board the traffic map
+replaced. It is still built and still fetched, so the two can be compared on
+the actual screen without a deploy. Pair it with `?night=0` after 22:00, since
+the map blanks itself overnight.
 
 ## Deploying
 
@@ -134,6 +140,12 @@ variables: `WEATHER_LAT`, `WEATHER_LON`, `HOME_LAT`, `HOME_LON`, `WORK_LAT`,
 `wrangler.jsonc` does not carry, and that absence is what protects them — see
 the note below before adding any of them back.
 
+The traffic map's four optional vars — `MAP_LAT`, `MAP_LON`, `MAP_ZOOM` and
+`MAP_ID` — are dashboard-owned for a different reason: the right zoom is found
+by standing in front of the TV and trying one, and a var in `wrangler.jsonc`
+could not be changed without a deploy. Left unset, the map centres on `HOME_*`
+at zoom 11.
+
 `HOME_*` and `WORK_*` are load-bearing: leave one unset and the commute is
 routed between two placeholder points in central London rather than falling
 back to anything sensible. Confirm all four with `/api/debug/commute-live`
@@ -177,6 +189,7 @@ an explicit toggle.
 ```bash
 npx wrangler secret put GOOGLE_ROUTES_API_KEY
 npx wrangler secret put COINGECKO_API_KEY
+npx wrangler secret put GOOGLE_MAPS_BROWSER_KEY
 ```
 
 Or add them in the dashboard under **Worker → Settings → Variables and
@@ -200,19 +213,48 @@ Use a **Demo** key, which is free. This code sends `x-cg-demo-api-key` to
 
 Check it took with `/api/debug/crypto-live` — see below.
 
+**`GOOGLE_MAPS_BROWSER_KEY` is not a secret, and must be restricted.**
+Without it the traffic tile says "Not configured" and loads nothing. It is
+stored as a secret only to keep it out of the repo: it is a *Maps JavaScript
+API* key, which by design is handed to the browser to load Google's script,
+and it therefore also travels in `/api/board`, which is public. Secrecy is not
+what protects it. Two settings are:
+
+1. **Application restriction → HTTP referrers**, listing only the board's own
+   origin, e.g. `https://daily-dashboard.<subdomain>.workers.dev/*`.
+2. **API restriction → Maps JavaScript API** alone. Not the Routes API — keep
+   that on `GOOGLE_ROUTES_API_KEY`, which never leaves the Worker.
+
+Enable the Maps JavaScript API on the Google Cloud project first, or the
+script loads and the tile renders Google's own error over a grey rectangle.
+
+Cost is not the concern it looks like. Google bills dynamic maps per map
+*load* — each time a map object is constructed — not per traffic repaint, and
+the traffic layer refreshes itself inside a map that is already on screen.
+This board constructs one on the nightly reload, on each mode change, and
+when the map wakes in the morning: single figures a day, against a free
+monthly allowance in the thousands. It is the kiosk shape of the thing — one
+page, open for weeks — that makes a live map essentially free here.
+
 ## How it behaves
 
 **Three tiles at a time, sometimes four.** Weather — which carries the clock —
 holds the top-left block permanently, so the two things glanced at most never
 move. Crypto owns the right-hand column. The block below weather belongs to
-whichever of commute or disruption is relevant, and they are never both up.
+whichever of commute or traffic is relevant, and they are never both up.
 
 **The board changes with the time of day.** On configured weekdays, commute is
 active in two windows: 05:30-09:00 (Home -> Work) and 15:00-19:00
 (Work -> Home). Inside a window the only question is how long the drive is, so
-the commute tile takes the slot; outside one it is whether the network is
-broken, so the disruption board does. The Worker decides which, so the layout
+the commute tile takes the slot; outside one it is what the roads around home
+look like, so the traffic map does. The Worker decides which, so the layout
 does not depend on the TV's clock.
+
+**The traffic map is the one tile that draws itself.** Everything else renders
+from the cached payload; the map is a live Google map with the traffic layer
+on, and the payload carries only where to centre it, how far out, and the key.
+There is no staleness marker on it because there would be nothing true to put
+in one — Google refreshes the traffic inside the map on its own schedule.
 
 **Bins only shows up when it matters.** The tile appears on the eve of a
 collection and is absent every other day — a panel that spends six days a week
@@ -235,13 +277,34 @@ but enough that nothing static sits on the same pixels for weeks. The palette
 dims between the configured night hours by swapping design tokens. Once a day
 at a quiet hour the page reloads itself.
 
+**The map gets its own burn-in treatment, because it needs it.** It is the
+largest continuous area on the board and it draws a shape that is identical
+every day — a road network never moves — which is the exact pattern a panel
+retains. Four things work against that:
+
+- It is **only up outside commute windows**, and **blanked entirely overnight**
+  between the configured night hours rather than dimmed. Not drawing it for
+  nine hours a day beats any amount of dimming, and there is no traffic to
+  report at 03:00. `VITE_MAP_HIDE_AT_NIGHT=false` keeps it on.
+- The map layer **drifts 16px around its own box every 7 minutes**, on top of
+  the board's own 6px/10min creep. The periods differ on purpose: on the same
+  period the two stay locked and add up to one bigger step instead of covering
+  more pixels. The layer is oversized by the drift distance, so it never
+  uncovers an edge.
+- It is drawn in a **dark, low-luminance style** with points of interest,
+  transit and street labels off, leaving Google's green/amber/red as the only
+  saturated thing on screen — which is also what makes it readable at a glance.
+- Nothing bright is pinned over it. The only overlay is the small "Traffic"
+  label, which moves with the board's own shift.
+
 ## Data sources
 
 | Tile | Source | Key | Refresh | Notes |
 | --- | --- | --- | --- | --- |
 | Weather + clock | Open-Meteo | none | 15 min | Current, next 12 hours, next 7 days |
 | Commute | Google Routes API | optional | 5 min | Morning and afternoon windows, one direction at a time |
-| Disruption | TfL Unified API | none | 5 min | All 11 tube lines + A12/A13/A406, shown outside commute windows. Roads are limited to TfL's own network -- no motorways |
+| Traffic | Google Maps JavaScript API | required for the tile | live | Drawn in the browser outside commute windows. No KV writes, no Worker requests |
+| Disruption | TfL Unified API | none | 5 min | All 11 tube lines + A12/A13/A406. No longer on the board -- reachable at `?focus=tfl`. Roads are limited to TfL's own network -- no motorways |
 | Bins | Havering collection-day portal (rendered) | none | ~3.5 days | Only on the eve of a collection; scrape, then manual-schedule fallback |
 | Crypto | CoinGecko | optional | 5 min | 10 tickers in USD, with 24h and 7d change |
 

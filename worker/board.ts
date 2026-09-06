@@ -5,6 +5,7 @@ import {
   type Bins,
   type Commute,
   type Crypto,
+  type MapView,
   type Source,
   type SourceKey,
   type Tfl,
@@ -125,6 +126,26 @@ function overdue(
   });
 }
 
+/**
+ * The traffic tile's configuration, or null when there is no key to draw with.
+ *
+ * Resolved per request rather than cached in KV: none of it is fetched from
+ * anywhere, so it costs nothing to assemble and never goes stale. Returning
+ * null rather than a half-filled object is what lets the tile say "not
+ * configured" instead of silently rendering a grey rectangle.
+ */
+function mapView(config: Config, env: Env): MapView | null {
+  const key = env.GOOGLE_MAPS_BROWSER_KEY;
+  if (key === undefined || key === "") return null;
+  return {
+    key,
+    lat: config.map.lat,
+    lon: config.map.lon,
+    zoom: config.map.zoom,
+    mapId: config.map.mapId,
+  };
+}
+
 export function boardMode(config: Config, now: Date): BoardMode {
   return activeCommuteSlot(config, now) === null ? "ambient" : "morning";
 }
@@ -167,7 +188,11 @@ export async function assembleBoard(
 
   return {
     generatedAt: now.toISOString(),
-    meta: { timezone: config.timezone, mode: boardMode(config, now) },
+    meta: {
+      timezone: config.timezone,
+      mode: boardMode(config, now),
+      map: mapView(config, env),
+    },
     weather: sourceFor<Weather>("weather"),
     commute: commuteSource,
     tfl: sourceFor<Tfl>("tfl"),

@@ -57,3 +57,55 @@ test("blank and malformed coordinates fall back rather than becoming NaN", () =>
   assert.ok(Number.isFinite(config.commute.work.lat));
   assert.ok(Number.isFinite(config.commute.work.lon));
 });
+
+/* -------------------------------------------------------------------------- */
+/* Traffic map                                                                 */
+/* -------------------------------------------------------------------------- */
+
+test("the map centres on the commute's home end by default", () => {
+  const config = readConfig(envWith({
+    HOME_LAT: "12.3456789",
+    HOME_LON: "-98.7654321",
+  }));
+
+  assert.equal(config.map.lat, 12.3456789);
+  assert.equal(config.map.lon, -98.7654321);
+});
+
+test("MAP_LAT and MAP_LON offset the view away from the house", () => {
+  const config = readConfig(envWith({
+    HOME_LAT: "12.3456789",
+    HOME_LON: "-98.7654321",
+    MAP_LAT: "23.4567891",
+    MAP_LON: "-87.6543219",
+  }));
+
+  assert.equal(config.map.lat, 23.4567891);
+  assert.equal(config.map.lon, -87.6543219);
+  // The commute is unaffected: these two centre a picture, they do not move
+  // either end of the route.
+  assert.equal(config.commute.home.lat, 12.3456789);
+});
+
+/**
+ * The zoom is the one setting meant to be retuned from the dashboard while
+ * looking at the TV, which is exactly how a "0", a "25" or a stray letter ends
+ * up in it. Every one of those has to land somewhere the traffic layer still
+ * draws, because the failure is silent: an out-of-range zoom renders a map,
+ * just not one with any traffic on it.
+ */
+test("map zoom is clamped to the range the traffic layer is useful over", () => {
+  assert.equal(readConfig(envWith({})).map.zoom, 11);
+  assert.equal(readConfig(envWith({ MAP_ZOOM: "13" })).map.zoom, 13);
+  assert.equal(readConfig(envWith({ MAP_ZOOM: "0" })).map.zoom, 9);
+  assert.equal(readConfig(envWith({ MAP_ZOOM: "25" })).map.zoom, 14);
+  assert.equal(readConfig(envWith({ MAP_ZOOM: "12.6" })).map.zoom, 13);
+  assert.equal(readConfig(envWith({ MAP_ZOOM: "" })).map.zoom, 11);
+  assert.equal(readConfig(envWith({ MAP_ZOOM: "wide" })).map.zoom, 11);
+});
+
+test("an unset map id stays null rather than becoming an empty style id", () => {
+  assert.equal(readConfig(envWith({})).map.mapId, null);
+  assert.equal(readConfig(envWith({ MAP_ID: "" })).map.mapId, null);
+  assert.equal(readConfig(envWith({ MAP_ID: "abc123" })).map.mapId, "abc123");
+});

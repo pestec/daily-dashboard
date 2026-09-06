@@ -11,3 +11,9 @@ GOOGLE_ROUTES_API_KEY=
 # Use a free *Demo* key: this code sends x-cg-demo-api-key to api.coingecko.com.
 # A paid Pro key needs a different host and header and will 400 here.
 COINGECKO_API_KEY=
+
+# Enables the traffic map; without it the tile says "Not configured".
+# Unlike the two above, this one is served to the browser by design and shows
+# up in /api/board. Restrict it by HTTP referrer and to the Maps JavaScript
+# API in Google Cloud -- for local dev, include http://localhost:5173/*.
+GOOGLE_MAPS_BROWSER_KEY=

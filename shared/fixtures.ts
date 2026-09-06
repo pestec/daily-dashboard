@@ -225,7 +225,9 @@ const crypto: Crypto = {
 function base(mode: BoardMode): BoardPayload {
   return {
     generatedAt: new Date().toISOString(),
-    meta: { timezone: "Europe/London", mode },
+    // No map: fixtures exist so the whole UI can be built with no keys and no
+    // network, and a live map is both. The tile renders its unconfigured state.
+    meta: { timezone: "Europe/London", mode, map: null },
     weather: ok(weather, 900),
     commute: mode === "morning" ? ok(commuteLive, 180) : disabled(180),
     tfl: ok(mode === "morning" ? tfl : tflAllClear, 300),

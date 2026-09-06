@@ -22,6 +22,16 @@ export const nightOverride: boolean | null = params.has("night")
   ? params.get("night") !== "0"
   : null;
 
+/**
+ * `?focus=map|tfl` picks what occupies the focus slot outside a commute
+ * window. The traffic map has it by default; the disruption board it replaced
+ * is still built and still reachable here, so the two can be compared on the
+ * real screen without a deploy.
+ */
+const rawFocus = params.get("focus");
+export const focusOverride: "map" | "tfl" | null =
+  rawFocus === "map" || rawFocus === "tfl" ? rawFocus : null;
+
 /** `?mode=morning|ambient` forces a layout, for the same reason. */
 const rawMode = params.get("mode");
 export const modeOverride: "morning" | "ambient" | null =
