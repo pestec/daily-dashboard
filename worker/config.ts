@@ -1,3 +1,4 @@
+import { clampMapZoom } from "../shared/mapFraming.ts";
 import type { BinKind } from "../shared/types.ts";
 import type { Env } from "./env.ts";
 import { parseHhMm } from "./time.ts";
@@ -26,7 +27,14 @@ export interface Config {
     days: number[];
   };
   tfl: { roadIds: string[]; lineModes: string[] };
-  map: { lat: number; lon: number; zoom: number; mapId: string | null };
+  map: {
+    lat: number;
+    lon: number;
+    zoom: number;
+    westLon: number | null;
+    eastLon: number | null;
+    mapId: string | null;
+  };
   crypto: { ids: string[]; vsCurrency: string };
   bins: { provider: string; rules: BinRule[] };
 }
@@ -98,17 +106,44 @@ const DEFAULT_CRYPTO_IDS: readonly string[] = [
  * there".
  *
  * 11 covers roughly 55km across the width of the tile from a 1920px board,
- * which for an east London centre reaches the M25 in both directions. It is a
- * starting point, not a verdict: MAP_ZOOM is dashboard-owned precisely so it
- * can be nudged a step either way while looking at the actual screen.
+ * which for an east London centre reaches the M25 in both directions.
+ *
+ * This is only the fallback now. Set MAP_WEST_LON and MAP_EAST_LON and the
+ * board derives the zoom from them instead, which is the better way round:
+ * the edges are what anyone actually has an opinion about, and the zoom that
+ * puts them there depends on the tile's pixel width. The clamp range lives
+ * in shared/mapFraming.ts, since both sides now apply it.
  */
 const DEFAULT_MAP_ZOOM = 11;
-const MIN_MAP_ZOOM = 9;
-const MAX_MAP_ZOOM = 14;
 
 function mapZoom(raw: string | undefined): number {
-  const zoom = Math.round(num(raw, DEFAULT_MAP_ZOOM));
-  return Math.min(MAX_MAP_ZOOM, Math.max(MIN_MAP_ZOOM, zoom));
+  return clampMapZoom(Math.round(num(raw, DEFAULT_MAP_ZOOM)));
+}
+
+/**
+ * The two longitudes that frame the tile, or nulls.
+ *
+ * All or nothing, and only in the right order. One limit on its own says
+ * nothing about how wide the view should be, and a west that sits east of
+ * the east would compute a negative span -- both would silently produce a
+ * frame with no relationship to what was asked for, so both fall back to
+ * MAP_ZOOM instead, which at least renders a map of the right place.
+ */
+function mapLimits(
+  west: string | undefined,
+  east: string | undefined,
+): { westLon: number | null; eastLon: number | null } {
+  const none = { westLon: null, eastLon: null };
+
+  if (west === undefined || west === "") return none;
+  if (east === undefined || east === "") return none;
+
+  const westLon = Number(west);
+  const eastLon = Number(east);
+  if (!Number.isFinite(westLon) || !Number.isFinite(eastLon)) return none;
+  if (westLon >= eastLon) return none;
+
+  return { westLon, eastLon };
 }
 
 const VALID_BIN_KINDS: readonly string[] = ["general", "recycling", "garden", "food"];
@@ -187,6 +222,7 @@ export function readConfig(env: Env): Config {
       lat: num(env.MAP_LAT, num(env.HOME_LAT, PLACEHOLDER_HOME.lat)),
       lon: num(env.MAP_LON, num(env.HOME_LON, PLACEHOLDER_HOME.lon)),
       zoom: mapZoom(env.MAP_ZOOM),
+      ...mapLimits(env.MAP_WEST_LON, env.MAP_EAST_LON),
       mapId: env.MAP_ID !== undefined && env.MAP_ID !== "" ? env.MAP_ID : null,
     },
     crypto: {

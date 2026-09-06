@@ -142,6 +142,8 @@ function mapView(config: Config, env: Env): MapView | null {
     lat: config.map.lat,
     lon: config.map.lon,
     zoom: config.map.zoom,
+    westLon: config.map.westLon,
+    eastLon: config.map.eastLon,
     mapId: config.map.mapId,
   };
 }

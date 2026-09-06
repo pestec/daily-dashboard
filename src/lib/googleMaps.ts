@@ -31,6 +31,14 @@ interface MapOptions {
   gestureHandling?: "none";
   keyboardShortcuts?: boolean;
   clickableIcons?: boolean;
+  /**
+   * Raster maps round the zoom to an integer unless this is on, and a
+   * rounded zoom moves the edges by up to a factor of two -- which is the
+   * difference between a frame that reaches the landmark it was told to and
+   * one that stops a mile short. Vector maps (a cloud `mapId`) default to
+   * true; this board asks explicitly because it usually runs raster.
+   */
+  isFractionalZoomEnabled?: boolean;
   /** Painted before any tile arrives. Left unset it is Google's near-white,
    *  which on a dark board is a flash of a bright rectangle on every load. */
   backgroundColor?: string;

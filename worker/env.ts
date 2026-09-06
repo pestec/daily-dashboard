@@ -59,6 +59,10 @@ interface DashboardVars {
   /** Dashboard-owned so the view can be retuned on the TV without a deploy --
    *  which is the whole point, since the right zoom is found by looking. */
   MAP_ZOOM?: string;
+  /** Longitudes to put at the tile's left and right edges. Set both, and
+   *  they replace MAP_ZOOM and the horizontal half of the centre. */
+  MAP_WEST_LON?: string;
+  MAP_EAST_LON?: string;
   MAP_ID?: string;
 }
 

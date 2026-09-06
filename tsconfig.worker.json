@@ -23,5 +23,5 @@
     "exactOptionalPropertyTypes": true
   },
   "include": ["worker", "shared", "worker-configuration.d.ts"],
-  "exclude": ["worker/**/*.test.ts"]
+  "exclude": ["worker/**/*.test.ts", "shared/**/*.test.ts"]
 }

@@ -140,11 +140,36 @@ variables: `WEATHER_LAT`, `WEATHER_LON`, `HOME_LAT`, `HOME_LON`, `WORK_LAT`,
 `wrangler.jsonc` does not carry, and that absence is what protects them — see
 the note below before adding any of them back.
 
-The traffic map's four optional vars — `MAP_LAT`, `MAP_LON`, `MAP_ZOOM` and
-`MAP_ID` — are dashboard-owned for a different reason: the right zoom is found
-by standing in front of the TV and trying one, and a var in `wrangler.jsonc`
-could not be changed without a deploy. Left unset, the map centres on `HOME_*`
-at zoom 11.
+The traffic map's vars — `MAP_WEST_LON`, `MAP_EAST_LON`, `MAP_LAT`, `MAP_LON`,
+`MAP_ZOOM` and `MAP_ID` — are dashboard-owned for a different reason: the
+framing is found by standing in front of the TV, and a var in
+`wrangler.jsonc` could not be changed without a deploy. Left unset entirely,
+the map centres on `HOME_*` at zoom 11.
+
+**Frame it by its edges, not by a zoom.** Set `MAP_WEST_LON` and
+`MAP_EAST_LON` to the longitudes of whatever should sit at the left and right
+edges — a well-known landmark either side of the area you want — and the
+board works out the zoom itself, from the tile's real pixel width. That is
+the right way round: the edges are the thing anyone has an opinion about, and
+the zoom that puts them there is a consequence of how wide the tile is. The
+pair also sets the horizontal centre, since asking for a particular thing at
+each edge fixes the midpoint between them. `MAP_LAT` still sets the vertical
+centre.
+
+Both must be set, and west must be less than east; anything else falls back
+to `MAP_ZOOM` rather than half-applying, because a frame built from one limit
+is not a near-miss — it is a map of somewhere else, drawn with complete
+confidence.
+
+> **North–south coverage is not a separate setting, and cannot be.** A map
+> covers ground in proportion to its container, so fixing the east–west
+> extent fixes the north–south extent with it, at the tile's own
+> height-to-width ratio. The focus slot is 1229×366px — 3.4:1 — so whatever
+> distance the limits span from side to side, the map reaches about a third
+> of that from top to bottom. Framing 16km of it east to west therefore shows
+> under 5km north to south. Widening that band means a squarer tile, which
+> means taking the space from another one; there is no third variable that
+> does it.
 
 `HOME_*` and `WORK_*` are load-bearing: leave one unset and the commute is
 routed between two placeholder points in central London rather than falling

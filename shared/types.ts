@@ -175,9 +175,29 @@ export interface MapView {
    * is what stops it being used elsewhere.
    */
   key: string;
+  /** Vertical centre. The horizontal centre comes from the limits below
+   *  when they are set, and from this pair's `lon` when they are not. */
   lat: number;
   lon: number;
+  /** Fallback framing, used only when the limits below are unset. */
   zoom: number;
+  /**
+   * What should sit at the tile's left and right edges, as longitudes.
+   *
+   * This is the framing that is actually asked for out loud -- "the airport
+   * on the left, the retail park on the right" -- and naming the edges is
+   * the only way to hit it exactly, since the zoom that satisfies it depends
+   * on how many pixels wide the tile happens to be. The board derives the
+   * zoom and the horizontal centre from these two; both null means fall back
+   * to `lon` and `zoom`.
+   *
+   * Note what this cannot do. Coverage follows the tile's own proportions,
+   * so fixing the east-west extent fixes the north-south extent with it, at
+   * the tile's height-to-width ratio. There is no third number that widens
+   * the view vertically.
+   */
+  westLon: number | null;
+  eastLon: number | null;
   /** Cloud-styled map id. When set, Google ignores the inline dark style and
    *  uses the style attached to this id instead. */
   mapId: string | null;

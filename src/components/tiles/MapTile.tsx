@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { zoomForLongitudeSpan } from "../../../shared/mapFraming.ts";
 import type { MapView } from "../../../shared/types.ts";
 import { useSlowOffset } from "../../hooks/useBurnInShift.ts";
 import { useNightDim } from "../../hooks/useNightDim.ts";
@@ -47,6 +48,7 @@ interface Props {
  * single day. See the drift and the night blanking below.
  */
 export function MapTile({ view, clock }: Props) {
+  const frameRef = useRef<HTMLDivElement | null>(null);
   const hostRef = useRef<HTMLDivElement | null>(null);
   const [attempt, setAttempt] = useState<Attempt | null>(null);
 
@@ -62,6 +64,8 @@ export function MapTile({ view, clock }: Props) {
   const lat = view?.lat ?? null;
   const lon = view?.lon ?? null;
   const zoom = view?.zoom ?? null;
+  const westLon = view?.westLon ?? null;
+  const eastLon = view?.eastLon ?? null;
   const mapId = view?.mapId ?? null;
 
   /**
@@ -72,7 +76,7 @@ export function MapTile({ view, clock }: Props) {
    * boundary, and the tag no longer matches, so the tile reads as loading
    * again without the effect having to reach back and reset it.
    */
-  const token = [key, lat, lon, zoom, mapId, asleep].join("|");
+  const token = [key, lat, lon, zoom, westLon, eastLon, mapId, asleep].join("|");
   const status: Status = attempt?.view === token ? attempt.status : "loading";
 
   useEffect(() => {
@@ -93,9 +97,21 @@ export function MapTile({ view, clock }: Props) {
         const maps = await loadGoogleMaps(key);
         if (cancelled) return;
 
+        // Measured, not assumed. The frame is the panel's own box; the host
+        // above it is deliberately wider, overhanging by the drift distance
+        // so the burn-in shift never uncovers an edge, and framing against
+        // that would put the limits slightly outside the visible window.
+        //
+        // Read once, at construction. The board is a fixed 1920x1080 canvas
+        // scaled as a whole -- a CSS transform, which does not change layout
+        // widths -- so this tile is 1229px for the life of the page and there
+        // is nothing to re-measure on.
+        const framed = frame(frameRef.current, westLon, eastLon);
+
         const map = new maps.Map(host, {
-          center: { lat, lng: lon },
-          zoom,
+          center: { lat, lng: framed?.centreLon ?? lon },
+          zoom: framed?.zoom ?? zoom,
+          isFractionalZoomEnabled: true,
           // A cloud-styled map id and inline styles are mutually exclusive:
           // Google ignores the second and warns. Send whichever is configured.
           ...(mapId !== null ? { mapId } : { styles: DARK_MAP_STYLE }),
@@ -126,13 +142,13 @@ export function MapTile({ view, clock }: Props) {
       // second map on top of the first and leaks it.
       host.replaceChildren();
     };
-  }, [key, lat, lon, zoom, mapId, asleep, token]);
+  }, [key, lat, lon, zoom, westLon, eastLon, mapId, asleep, token]);
 
   return (
     <section className="area-focus glass-panel min-h-0 min-w-0 overflow-hidden rounded-2xl">
       {/* The shell's own `> *` rule makes this the positioning context, which
           is what the absolutely placed map and label below hang off. */}
-      <div className="h-full w-full">
+      <div ref={frameRef} className="h-full w-full">
         {view !== null && !asleep && (
           <div
             ref={hostRef}
@@ -156,6 +172,30 @@ export function MapTile({ view, clock }: Props) {
       </div>
     </section>
   );
+}
+
+/**
+ * Centre and zoom derived from the configured east-west limits, or null when
+ * they are not set and the tile should use its own `lon` and `zoom`.
+ *
+ * The limits define the horizontal centre as well as the zoom: asking for a
+ * particular thing at each edge fixes the midpoint between them, and honouring
+ * the span while centring somewhere else would put one of the two limits off
+ * screen. The vertical centre is left alone -- there is no second pair for it,
+ * because north-south coverage is not a free choice: it is whatever the tile's
+ * height-to-width ratio makes of the east-west extent.
+ */
+function frame(
+  element: HTMLElement | null,
+  westLon: number | null,
+  eastLon: number | null,
+): { centreLon: number; zoom: number } | null {
+  if (element === null || westLon === null || eastLon === null) return null;
+
+  const zoom = zoomForLongitudeSpan(eastLon - westLon, element.clientWidth);
+  if (zoom === null) return null;
+
+  return { centreLon: (westLon + eastLon) / 2, zoom };
 }
 
 /**

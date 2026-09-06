@@ -109,3 +109,69 @@ test("an unset map id stays null rather than becoming an empty style id", () => 
   assert.equal(readConfig(envWith({ MAP_ID: "" })).map.mapId, null);
   assert.equal(readConfig(envWith({ MAP_ID: "abc123" })).map.mapId, "abc123");
 });
+
+/**
+ * The framing the board actually runs on: two longitudes, naming what should
+ * sit at the tile's left and right edges.
+ *
+ * Every rejection below falls back to MAP_ZOOM rather than half-applying. A
+ * frame built from one limit, or from a pair in the wrong order, is not a
+ * near-miss -- it is a map of somewhere else, rendered with total confidence.
+ */
+test("both map limits pass through when they are set and in order", () => {
+  const config = readConfig(envWith({
+    MAP_WEST_LON: "-1.2345678",
+    MAP_EAST_LON: "0.9876543",
+  }));
+
+  assert.equal(config.map.westLon, -1.2345678);
+  assert.equal(config.map.eastLon, 0.9876543);
+});
+
+test("a half-configured or reversed pair of limits falls back to the zoom", () => {
+  const none = { westLon: null, eastLon: null };
+
+  // One on its own says nothing about how wide the view should be.
+  assert.deepEqual(pickLimits(readConfig(envWith({ MAP_WEST_LON: "0.05" }))), none);
+  assert.deepEqual(pickLimits(readConfig(envWith({ MAP_EAST_LON: "0.28" }))), none);
+
+  // Reversed: the span would come out negative.
+  assert.deepEqual(
+    pickLimits(readConfig(envWith({ MAP_WEST_LON: "0.28", MAP_EAST_LON: "0.05" }))),
+    none,
+  );
+
+  // Equal: a span of nothing, which is a zoom of infinity.
+  assert.deepEqual(
+    pickLimits(readConfig(envWith({ MAP_WEST_LON: "0.1", MAP_EAST_LON: "0.1" }))),
+    none,
+  );
+
+  // Blank and malformed, the two shapes an unset dashboard var really takes.
+  assert.deepEqual(
+    pickLimits(readConfig(envWith({ MAP_WEST_LON: "", MAP_EAST_LON: "0.28" }))),
+    none,
+  );
+  assert.deepEqual(
+    pickLimits(readConfig(envWith({ MAP_WEST_LON: "west", MAP_EAST_LON: "0.28" }))),
+    none,
+  );
+});
+
+/** The zoom stays available underneath the limits, as the fallback they
+ *  degrade to. */
+test("limits do not disturb the fallback zoom or the vertical centre", () => {
+  const config = readConfig(envWith({
+    HOME_LAT: "12.3456789",
+    MAP_ZOOM: "13",
+    MAP_WEST_LON: "0.05",
+    MAP_EAST_LON: "0.28",
+  }));
+
+  assert.equal(config.map.zoom, 13);
+  assert.equal(config.map.lat, 12.3456789);
+});
+
+function pickLimits(config: ReturnType<typeof readConfig>) {
+  return { westLon: config.map.westLon, eastLon: config.map.eastLon };
+}
