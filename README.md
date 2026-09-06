@@ -44,10 +44,11 @@ To build the whole UI with no keys and no network, set `VITE_USE_MOCK=true` in
 | `npm run build` | Production build into `dist/` |
 | `npm run typecheck` | Regenerates Worker types, then `tsc --build` |
 | `npm run lint` | ESLint over app, Worker and shared code |
+| `npm test` | Worker unit tests, plus the KV write-budget simulation |
 | `npm run deploy` | Build and deploy the Worker and its assets |
 | `npm run cf-typegen` | Regenerate `worker-configuration.d.ts` from `wrangler.jsonc` |
 
-Run `typecheck`, `lint` and `build` before committing.
+Run `typecheck`, `lint`, `test` and `build` before committing.
 
 ## URL flags
 
@@ -77,6 +78,29 @@ npx wrangler kv namespace create BOARD_KV
 
 …and paste the returned id into `kv_namespaces[0].id`. The id is an identifier,
 not a credential — it is safe to commit, and Cloudflare's own templates do.
+
+#### The write budget
+
+The KV free tier allows **1,000 writes a day for the whole account**, and reads
+are effectively free at 100,000. The cron is what spends the writes, not the
+board: a source on a five-minute cadence writes 288 times a day on its own, so
+five of them will exhaust the tier overnight with nobody watching.
+
+Three rules keep it inside the allowance, and `worker/refresh.test.ts` walks a
+full simulated day of ticks to prove it:
+
+- a source that returns exactly what is already cached is not rewritten, until
+  its stamp is one cadence away from crossing its TTL;
+- a source with nothing to cache — the commute outside its window — writes
+  nothing at all rather than storing a null;
+- cadences below 900s are reserved for sources that earn it.
+
+That comes to roughly 380 writes on a weekday. Before adding a source or
+tightening a cadence in `CADENCE`, check the total is still under the cap:
+
+```bash
+npm test
+```
 
 ### 2. Deploy
 
@@ -108,6 +132,11 @@ are placeholders. Set the real ones in the Cloudflare dashboard under
 **Worker → Settings → Variables and Secrets**, as plaintext variables:
 `WEATHER_LAT`, `WEATHER_LON`, `HOME_LAT`, `HOME_LON`, `WORK_LAT`, `WORK_LON`,
 and your own `BIN_SCHEDULE`.
+
+`HOME_*` and `WORK_*` are load-bearing: leave one unset and the commute is
+routed between two placeholder points in central London rather than falling
+back to anything sensible. Confirm all four with `/api/debug/commute-live`
+after setting them.
 
 > This is only safe because `wrangler.jsonc` sets `keep_vars: true`. By default
 > wrangler treats its config as the source of truth and overwrites or deletes
@@ -202,9 +231,15 @@ at a quiet hour the page reloads itself.
 
 ### Commute debug endpoint
 
-`/api/debug/commute-live` performs one live Google Routes call and returns both
-the raw upstream JSON and the parsed commute payload. It is intended for
-shape-verification while setting up route fields and should not be polled.
+`/api/debug/commute-live` performs one live Google Routes call and returns the
+raw upstream JSON, the parsed commute payload, and — under `resolved` — the two
+endpoints the Worker actually routed between.
+
+Check `resolved` after changing `HOME_LAT`/`HOME_LON`/`WORK_LAT`/`WORK_LON`. A
+commute from the wrong coordinates still returns a perfectly plausible journey
+time, so the board cannot tell you the variable did not take effect; this can.
+It is intended for shape-verification while setting up route fields and should
+not be polled.
 
 ### Crypto debug endpoint
 

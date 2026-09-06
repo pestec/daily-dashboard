@@ -17,14 +17,30 @@ interface Cadence {
   ttlSeconds: number;
 }
 
+/**
+ * Cadences are a KV write budget as much as a freshness policy.
+ *
+ * The Workers KV free tier allows 1,000 writes a day for the whole account, and
+ * a source refreshed every five minutes spends 288 of them on its own. Five
+ * sources on the five-minute cron came to ~960 writes a day before a single
+ * browser ever asked for the board -- which is why the cap was being reached on
+ * days nobody looked at it. Anything below 900s here claims a quarter of the
+ * daily budget, so it needs to be worth that.
+ */
 export const CADENCE: Record<SourceKey, Cadence> = {
   // Forecasts do not move quickly, and Open-Meteo is free but not ours to abuse.
   weather: { refreshSeconds: 900, ttlSeconds: 2_400 },
-  // Only ever called inside active commute windows.
+  // Only ever called inside active commute windows, so its cost is bounded by
+  // the windows themselves rather than by the length of the day.
   commute: { refreshSeconds: 300, ttlSeconds: 600 },
+  // Line status is nearly always identical between ticks, so the unchanged-write
+  // skip below does the saving here rather than the cadence.
   tfl: { refreshSeconds: 300, ttlSeconds: 1_200 },
   bins: { refreshSeconds: 302_400, ttlSeconds: 1_209_600 },
-  crypto: { refreshSeconds: 300, ttlSeconds: 1_200 },
+  // Prices genuinely differ on every fetch, so nothing dedupes them and the
+  // cadence is the only lever. Fifteen minutes is ample for a wall board; at
+  // five it was taking a third of the entire daily write budget on its own.
+  crypto: { refreshSeconds: 900, ttlSeconds: 2_400 },
 };
 
 /**
@@ -33,6 +49,21 @@ export const CADENCE: Record<SourceKey, Cadence> = {
  * a retry down -- it cannot make one more frequent than intended.
  */
 const FAILURE_RETRY_SECONDS = 300;
+
+/**
+ * How stale an *unchanged* envelope may get before its stamp is rewritten anyway.
+ *
+ * Re-storing bytes identical to what is already cached tells the board nothing,
+ * but skipping the write also freezes `fetchedAt`, and the client reads that to
+ * decide whether a tile is stale. So the stamp is still refreshed one cadence
+ * before the envelope would cross its TTL: an unchanged source never gets
+ * flagged as a missed cycle, and it costs one write per TTL instead of one per
+ * tick.
+ */
+function stampRefreshSeconds(key: SourceKey): number {
+  const { refreshSeconds, ttlSeconds } = CADENCE[key];
+  return Math.max(ttlSeconds - refreshSeconds, refreshSeconds);
+}
 
 /** Fetches one source's data. Throws on failure; the caller decides what that
  *  means for what is already cached. */
@@ -84,6 +115,20 @@ function messageOf(error: unknown): string {
 }
 
 /**
+ * Whether storing `data` would change anything the board shows.
+ *
+ * Both sides are produced by the same construction code, so key order is stable
+ * and comparing serialised forms is enough. An envelope carrying an error never
+ * counts as matching: clearing that error is a real change.
+ */
+function isUnchanged(existing: Envelope<unknown> | null, data: unknown): boolean {
+  if (existing === null) return false;
+  if (existing.lastError !== undefined) return false;
+  if (existing.fetchedAt === null) return false;
+  return JSON.stringify(existing.data) === JSON.stringify(data);
+}
+
+/**
  * Refreshes one source and writes the result to KV.
  *
  * On failure the previous value is kept and stamped with the error, so the
@@ -126,6 +171,19 @@ async function refreshOne(
 
   try {
     const data = await fetchSource(key, config, env, now);
+
+    // Nothing to cache -- commute outside its window is the only source that
+    // reaches this. The board works out on its own that the tile is disabled
+    // and never reads the envelope, so persisting a null over a null bought
+    // nothing while costing a write on every tick of every hour the commute was
+    // not running: close to a third of the daily budget, most of it overnight.
+    if (data === null) return;
+
+    if (isUnchanged(existing, data)) {
+      const stampAge = envelopeAgeSeconds(existing, now);
+      if (stampAge !== null && stampAge < stampRefreshSeconds(key)) return;
+    }
+
     await writeEnvelope(env.BOARD_KV, key, {
       data,
       fetchedAt: now.toISOString(),
@@ -137,6 +195,10 @@ async function refreshOne(
       lastError: messageOf(error),
       lastErrorAt: now.toISOString(),
     };
+    // Deliberately written every time, even when the same error repeats: the
+    // retry backoff above reads `lastErrorAt` back out of KV, so freezing that
+    // stamp to save a write would disable the backoff and let every board poll
+    // hammer an upstream that is already failing.
     await writeEnvelope(env.BOARD_KV, key, failed);
   }
 }

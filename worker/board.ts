@@ -102,9 +102,16 @@ async function loadSource(
  *  scheduled refresh did not happen when it should have. */
 function overdue(
   envelopes: ReadonlyMap<SourceKey, Envelope<unknown> | null>,
+  config: Config,
   now: Date,
 ): SourceKey[] {
   return SOURCE_KEYS.filter((key) => {
+    // Outside its window the commute envelope is deliberately left alone rather
+    // than rewritten with a null every tick, so its stamp ages all night. That
+    // is not a missed refresh, and chasing it would queue a pointless refresh
+    // behind every poll the TV makes between windows.
+    if (key === "commute" && activeCommuteSlot(config, now) === null) return false;
+
     const envelope = envelopes.get(key) ?? null;
     if (envelope === null) return false;
     const age = envelopeAgeSeconds(envelope, now);
@@ -141,7 +148,7 @@ export async function assembleBoard(
   // than one that repairs itself. Anything past its cadence is refreshed in
   // the background, so the response stays a cache read and the next poll gets
   // fresh data.
-  const stale = overdue(envelopes, now);
+  const stale = overdue(envelopes, config, now);
   if (stale.length > 0) {
     ctx.waitUntil(refreshDue(config, env, now, stale));
   }

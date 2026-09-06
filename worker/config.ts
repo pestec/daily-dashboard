@@ -30,15 +30,19 @@ export interface Config {
   bins: { provider: string; rules: BinRule[] };
 }
 
-const COMMUTE_HOME = {
-  lat: 51.53578437178105,
-  lon: 0.19729711541201045,
-} as const;
-
-const COMMUTE_WORK = {
-  lat: 51.505184346371664,
-  lon: 0.05209853605892316,
-} as const;
+/**
+ * Fallbacks for the commute endpoints, and deliberately not anywhere real.
+ *
+ * These used to be real coordinates, hardcoded, and `readConfig` used them
+ * unconditionally -- so HOME_LAT/HOME_LON and WORK_LAT/WORK_LON could be set in
+ * the dashboard and have no effect whatsoever, while the addresses the README
+ * promises are kept out of the repo sat in this file. The variables are the
+ * source of truth now, and these match the placeholders in wrangler.jsonc: a
+ * commute leg between two points in central London means a variable is missing
+ * rather than wrong.
+ */
+const PLACEHOLDER_HOME = { lat: 51.5, lon: 0.1 } as const;
+const PLACEHOLDER_WORK = { lat: 51.51, lon: 0.12 } as const;
 
 function num(raw: string | undefined, fallback: number): number {
   const parsed = Number(raw);
@@ -129,9 +133,15 @@ export function readConfig(env: Env): Config {
       label: env.WEATHER_LABEL || "Home",
     },
     commute: {
-      home: { lat: COMMUTE_HOME.lat, lon: COMMUTE_HOME.lon },
+      home: {
+        lat: num(env.HOME_LAT, PLACEHOLDER_HOME.lat),
+        lon: num(env.HOME_LON, PLACEHOLDER_HOME.lon),
+      },
       homeLabel: env.COMMUTE_HOME_LABEL || "Home",
-      work: { lat: COMMUTE_WORK.lat, lon: COMMUTE_WORK.lon },
+      work: {
+        lat: num(env.WORK_LAT, PLACEHOLDER_WORK.lat),
+        lon: num(env.WORK_LON, PLACEHOLDER_WORK.lon),
+      },
       workLabel: env.COMMUTE_LABEL || "Work",
       morningStartMinutes:
         parseHhMm(env.COMMUTE_MORNING_WINDOW_START || "") ??
