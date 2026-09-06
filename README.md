@@ -44,10 +44,11 @@ To build the whole UI with no keys and no network, set `VITE_USE_MOCK=true` in
 | `npm run build` | Production build into `dist/` |
 | `npm run typecheck` | Regenerates Worker types, then `tsc --build` |
 | `npm run lint` | ESLint over app, Worker and shared code |
+| `npm test` | Worker unit tests, plus the KV write-budget simulation |
 | `npm run deploy` | Build and deploy the Worker and its assets |
 | `npm run cf-typegen` | Regenerate `worker-configuration.d.ts` from `wrangler.jsonc` |
 
-Run `typecheck`, `lint` and `build` before committing.
+Run `typecheck`, `lint`, `test` and `build` before committing.
 
 ## URL flags
 
@@ -77,6 +78,29 @@ npx wrangler kv namespace create BOARD_KV
 
 …and paste the returned id into `kv_namespaces[0].id`. The id is an identifier,
 not a credential — it is safe to commit, and Cloudflare's own templates do.
+
+#### The write budget
+
+The KV free tier allows **1,000 writes a day for the whole account**, and reads
+are effectively free at 100,000. The cron is what spends the writes, not the
+board: a source on a five-minute cadence writes 288 times a day on its own, so
+five of them will exhaust the tier overnight with nobody watching.
+
+Three rules keep it inside the allowance, and `worker/refresh.test.ts` walks a
+full simulated day of ticks to prove it:
+
+- a source that returns exactly what is already cached is not rewritten, until
+  its stamp is one cadence away from crossing its TTL;
+- a source with nothing to cache — the commute outside its window — writes
+  nothing at all rather than storing a null;
+- cadences below 900s are reserved for sources that earn it.
+
+That comes to roughly 380 writes on a weekday. Before adding a source or
+tightening a cadence in `CADENCE`, check the total is still under the cap:
+
+```bash
+npm test
+```
 
 ### 2. Deploy
 
