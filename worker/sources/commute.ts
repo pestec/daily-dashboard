@@ -204,11 +204,18 @@ export async function fetchCommuteDebug(
   config: Config,
   apiKey: string,
   slot: CommuteSlot,
-): Promise<{ provider: string; parsed: Commute; raw: unknown }> {
+): Promise<{ provider: string; resolved: unknown; parsed: Commute; raw: unknown }> {
   const leg = legForSlot(config, slot);
   const { raw, timing } = await ACTIVE_ROUTING_PROVIDER.fetchTiming(leg, apiKey);
   return {
     provider: "google-routes",
+    /* A journey time is plausible whatever the endpoints are, so a commute
+       routed from the wrong place looks exactly like one routed from the right
+       place -- which is how HOME_LAT/WORK_LAT went unread for as long as they
+       did. Echoing back the coordinates the Worker actually resolved is the
+       only way to tell a dashboard variable that took effect from one that was
+       silently ignored. */
+    resolved: { slot, origin: leg.origin, destination: leg.destination },
     parsed: toLiveCommute(config, timing, slot),
     raw,
   };

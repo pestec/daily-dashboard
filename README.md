@@ -133,6 +133,11 @@ are placeholders. Set the real ones in the Cloudflare dashboard under
 `WEATHER_LAT`, `WEATHER_LON`, `HOME_LAT`, `HOME_LON`, `WORK_LAT`, `WORK_LON`,
 and your own `BIN_SCHEDULE`.
 
+`HOME_*` and `WORK_*` are load-bearing: leave one unset and the commute is
+routed between two placeholder points in central London rather than falling
+back to anything sensible. Confirm all four with `/api/debug/commute-live`
+after setting them.
+
 > This is only safe because `wrangler.jsonc` sets `keep_vars: true`. By default
 > wrangler treats its config as the source of truth and overwrites or deletes
 > dashboard-set vars on every deploy — which would silently reset your real
@@ -226,9 +231,15 @@ at a quiet hour the page reloads itself.
 
 ### Commute debug endpoint
 
-`/api/debug/commute-live` performs one live Google Routes call and returns both
-the raw upstream JSON and the parsed commute payload. It is intended for
-shape-verification while setting up route fields and should not be polled.
+`/api/debug/commute-live` performs one live Google Routes call and returns the
+raw upstream JSON, the parsed commute payload, and — under `resolved` — the two
+endpoints the Worker actually routed between.
+
+Check `resolved` after changing `HOME_LAT`/`HOME_LON`/`WORK_LAT`/`WORK_LON`. A
+commute from the wrong coordinates still returns a perfectly plausible journey
+time, so the board cannot tell you the variable did not take effect; this can.
+It is intended for shape-verification while setting up route fields and should
+not be polled.
 
 ### Crypto debug endpoint
 
